@@ -1,0 +1,18 @@
+<!doctype html>
+<html lang="en">
+<head>
+<meta charset="utf-8" />
+<meta name="viewport" content="width=device-width,initial-scale=1" />
+<title>Pluckers Trivia — TV Preview</title>
+<style>
+  html, body { margin: 0; height: 100%; background: #000; overflow: hidden; }
+  iframe { border: 0; width: 100vw; height: 100vh; display: block; }
+</style>
+</head>
+<body>
+  <!-- Shows exactly what a TV displays during the game. Runs in "demo" mode:
+       no host, no Supabase, no room code — it auto-cycles through the TV screens
+       (title → round intro → questions with the how-to line → answer review). -->
+  <iframe src="index.html?demo" title="TV point-of-view preview" allowfullscreen></iframe>
+</body>
+</html>

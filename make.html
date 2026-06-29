@@ -1,0 +1,1449 @@
+<!doctype html>
+<html lang="en">
+<head>
+<meta charset="utf-8" />
+<meta name="viewport" content="width=device-width,initial-scale=1" />
+<title>Trivia Studio — Version Builder</title>
+<link rel="preconnect" href="https://fonts.googleapis.com">
+<link rel="preconnect" href="https://fonts.gstatic.com" crossorigin>
+<link href="https://fonts.googleapis.com/css2?family=Inter:wght@400;500;600;700;800&family=Anton&family=Oswald:wght@500;700&family=Bebas+Neue&family=Archivo+Black&family=Fredoka:wght@500;600;700&family=Poppins:wght@600;700;800&family=Montserrat:wght@700;800&family=Bungee&family=Righteous&family=Lobster&family=Pacifico&family=Playfair+Display:wght@700;800;900&family=Rye&family=Press+Start+2P&family=Monoton&family=Permanent+Marker&family=Teko:wght@500;600;700&family=Russo+One&family=Black+Ops+One&family=Staatliches&family=Alfa+Slab+One&family=Titan+One&family=Luckiest+Guy&family=Bangers&family=Fjalla+One&family=Abril+Fatface&family=Lilita+One&family=Audiowide&family=Orbitron:wght@500;700;900&family=Chewy&family=Concert+One&family=Patua+One&family=Sigmar+One&family=Special+Elite&family=Caveat:wght@500;700&family=Creepster&display=swap" rel="stylesheet">
+<script src="https://cdn.jsdelivr.net/npm/@supabase/supabase-js@2"></script>
+<style>
+  :root{
+    --bg1:#0d1322; --bg2:#070b14; --surface:#141c2f; --ink:#e9eefb; --muted:#9aa7c4; --faint:#6c789a;
+    --line:#222c44; --line-strong:#33405e; --field:#0f1828; --field-line:#2c3a56; --field-hi:#1b2540;
+    --accent:#6d6dfb; --accent2:#9b6bff; --accent-soft:rgba(109,109,251,.16); --ring:rgba(109,109,251,.32);
+    --radius:16px; --shadow-sm:0 1px 2px rgba(0,0,0,.3),0 2px 8px rgba(0,0,0,.35);
+    --shadow-md:0 12px 28px rgba(0,0,0,.45),0 28px 60px rgba(0,0,0,.5);
+  }
+  *{box-sizing:border-box}
+  html,body{margin:0}
+  body{
+    font-family:"Inter",system-ui,-apple-system,"Segoe UI",sans-serif; color:var(--ink);
+    -webkit-font-smoothing:antialiased; line-height:1.45; min-height:100vh;
+    background:
+      radial-gradient(900px 520px at 88% -8%, rgba(155,107,255,.16), transparent 60%),
+      radial-gradient(820px 500px at 5% 0%, rgba(109,109,251,.16), transparent 55%),
+      linear-gradient(180deg, var(--bg1), var(--bg2));
+    background-attachment:fixed;
+  }
+  /* ---- App bar ---- */
+  .appbar{background:rgba(14,19,34,.78);backdrop-filter:blur(10px);border-bottom:1px solid var(--line);
+    padding:14px 28px;display:flex;align-items:center;gap:14px;position:sticky;top:0;z-index:20}
+  .logo-mark{width:42px;height:42px;border-radius:12px;flex:0 0 auto;display:grid;place-items:center;
+    background:linear-gradient(135deg,var(--accent),var(--accent2));color:#fff;font-size:21px;box-shadow:0 6px 16px rgba(91,91,240,.38)}
+  .appbar .titles{flex:1;min-width:0}
+  .appbar h1{font-size:17px;font-weight:800;margin:0;letter-spacing:-.3px}
+  .appbar p{font-size:12.5px;color:var(--muted);margin:1px 0 0}
+  .pill{font-size:12px;font-weight:600;color:var(--accent);background:var(--accent-soft);border:1px solid #e0e3ff;padding:6px 12px;border-radius:999px;white-space:nowrap}
+
+  .page{max-width:1240px;margin:0 auto;padding:26px;display:grid;grid-template-columns:minmax(0,1fr) minmax(0,1fr);gap:24px;align-items:start}
+  @media(max-width:920px){.page{grid-template-columns:1fr;padding:18px}}
+  .card{background:var(--surface);border:1px solid var(--line);border-radius:var(--radius);box-shadow:var(--shadow-sm)}
+  .card-pad{padding:22px 24px}
+  .card h2{font-size:15px;font-weight:800;margin:0 0 2px;letter-spacing:-.1px}
+  .card .desc{font-size:13px;color:var(--muted);margin:0 0 18px}
+  .right{position:sticky;top:86px;display:flex;flex-direction:column;gap:20px}
+
+  /* ---- Sections / form ---- */
+  .sec{border-top:1px solid var(--line);margin-top:20px;padding-top:18px}
+  .sec:first-of-type{border-top:none;margin-top:0;padding-top:0}
+  .sec-h{font-size:11px;font-weight:700;letter-spacing:1.2px;text-transform:uppercase;color:var(--faint);margin:0 0 14px}
+  .group{margin-bottom:16px}
+  .group:last-child{margin-bottom:0}
+  .lbl{display:block;font-size:13px;font-weight:600;color:var(--ink);margin-bottom:7px}
+  .lbl .opt{color:var(--faint);font-weight:500}
+  .help{font-size:12px;color:var(--muted);margin:7px 0 0;line-height:1.5}
+  .inp{width:100%;padding:11px 13px;border:1px solid var(--line-strong);border-radius:10px;font:inherit;font-size:15px;color:var(--ink);background:#fff;transition:border-color .15s,box-shadow .15s}
+  .inp::placeholder{color:var(--faint)}
+  .inp:focus{outline:none;border-color:var(--accent);box-shadow:0 0 0 4px var(--ring)}
+  .row2{display:flex;gap:12px}.row2 .inp{flex:1;min-width:0}
+  .swatches{display:grid;grid-template-columns:1fr 1fr;gap:12px}
+  .swatch{display:flex;align-items:center;gap:12px;border:1px solid var(--line);border-radius:11px;padding:9px 12px;background:#fff;transition:border-color .15s}
+  .swatch:hover{border-color:var(--line-strong)}
+  .swatch input[type=color]{-webkit-appearance:none;appearance:none;width:36px;height:36px;border:none;border-radius:9px;background:none;cursor:pointer;padding:0;flex:0 0 auto;box-shadow:inset 0 0 0 1px rgba(0,0,0,.08)}
+  .swatch input[type=color]::-webkit-color-swatch-wrapper{padding:0}
+  .swatch input[type=color]::-webkit-color-swatch{border:none;border-radius:9px}
+  .swatch .sw-name{font-size:13px;font-weight:600;line-height:1.2}
+  .swatch .sw-hex{font-size:11.5px;color:var(--muted);font-family:ui-monospace,Consolas,monospace;text-transform:uppercase}
+  .seg{display:flex;flex-wrap:wrap;gap:6px;background:#eef1f7;border:1px solid var(--line);border-radius:11px;padding:5px}
+  .seg button{border:none;background:none;font:inherit;font-size:13px;font-weight:600;color:var(--muted);padding:9px 14px;border-radius:8px;cursor:pointer;transition:background .15s,color .15s}
+  .seg button:hover{color:var(--ink)}
+  .seg button.active{background:#fff;color:var(--ink);box-shadow:var(--shadow-sm)}
+  .uploadrow{display:flex;gap:8px;margin-top:10px}
+  .uploadrow .btn{font-size:13px;padding:9px 14px}
+  /* brand palette */
+  .palette{margin-top:14px;border:1px dashed var(--line-strong);border-radius:12px;padding:13px 14px;background:#fafbfe}
+  .pal-head{display:flex;align-items:center;justify-content:space-between;gap:10px;flex-wrap:wrap;margin-bottom:11px}
+  .pal-title{font-size:11px;font-weight:700;color:var(--faint);text-transform:uppercase;letter-spacing:1px}
+  .pal-apply{font-size:12.5px;color:var(--muted);display:flex;align-items:center;gap:6px}
+  .pal-sel{font:inherit;font-size:13px;font-weight:600;border:1px solid var(--line-strong);border-radius:8px;padding:5px 8px;background:#fff;color:var(--ink);cursor:pointer}
+  .chips{display:flex;flex-wrap:wrap;gap:8px}
+  .chip{display:inline-flex;align-items:center;gap:7px;border:1px solid var(--line-strong);background:#fff;border-radius:999px;padding:6px 13px 6px 8px;font:inherit;font-size:12.5px;font-weight:600;color:var(--ink);cursor:pointer;transition:border-color .15s,box-shadow .15s}
+  .chip:hover{border-color:var(--accent);box-shadow:0 0 0 3px var(--ring)}
+  .chip .dot{width:16px;height:16px;border-radius:50%;flex:0 0 auto}
+  .chip .px{border:none;background:#eef1f7;color:#8893a8;width:17px;height:17px;border-radius:50%;cursor:pointer;font-size:12px;line-height:1;display:grid;place-items:center;padding:0;margin-left:2px}
+  .chip .px:hover{background:#fde2e2;color:#b42318}
+  .pal-add{display:flex;gap:8px;margin-top:11px;align-items:center}
+  .pal-add input[type=text]{flex:1;min-width:80px;padding:8px 10px;border:1px solid var(--line-strong);border-radius:8px;background:#fff;color:var(--ink);font:inherit;font-size:13px}
+  .pal-add input[type=color]{width:38px;height:34px;border:1px solid var(--line-strong);border-radius:8px;background:#fff;padding:2px;cursor:pointer;flex:0 0 auto}
+  .pal-add .btn{font-size:13px;padding:8px 13px}
+  /* brand search */
+  .brand-results{display:none;margin-top:8px;border:1px solid var(--line-strong);border-radius:10px;overflow:hidden auto;background:#fff;max-height:300px}
+  .brand-row{display:flex;align-items:center;justify-content:space-between;gap:10px;width:100%;padding:10px 13px;background:#fff;border:0;border-bottom:1px solid #eef1f7;color:#10182a;cursor:pointer;text-align:left;font:inherit}
+  .brand-row:last-child{border-bottom:0}
+  .brand-row:hover{background:#eef3ff}
+  .brand-name{font-weight:600;font-size:14px}
+  .brand-sw{display:flex;gap:4px;flex:0 0 auto}
+  .brand-sw i{width:20px;height:20px;border-radius:5px;box-shadow:inset 0 0 0 1px rgba(0,0,0,.18)}
+  .brand-empty{padding:11px 13px;font-size:13px;color:#6c789a;background:#fff}
+  /* my-backgrounds gallery */
+  .bg-gallery{display:flex;flex-wrap:wrap;gap:8px;margin-top:8px}
+  .bg-thumb{position:relative;width:76px;height:48px;border-radius:8px;border:2px solid var(--line-strong);background-size:cover;background-position:center;cursor:pointer;overflow:hidden;flex:0 0 auto}
+  .bg-thumb:hover{border-color:var(--accent)}
+  .bg-thumb.active{border-color:var(--accent);box-shadow:0 0 0 2px var(--accent)}
+  .bg-thumb .px{position:absolute;top:2px;right:2px;width:18px;height:18px;border:none;border-radius:50%;background:rgba(0,0,0,.6);color:#fff;font-size:12px;line-height:1;cursor:pointer;display:grid;place-items:center;padding:0}
+  /* presets */
+  .preset-list{display:flex;flex-wrap:wrap;gap:8px}
+  .preset{display:inline-flex;align-items:center;gap:7px;border:1px solid var(--line-strong);background:#fff;border-radius:999px;padding:6px 8px 6px 11px;font-size:12.5px;font-weight:600;color:var(--ink);cursor:pointer;transition:border-color .15s,box-shadow .15s}
+  .preset:hover{border-color:var(--accent);box-shadow:0 0 0 3px var(--ring)}
+  .preset.active{border-color:var(--accent);box-shadow:0 0 0 3px var(--ring);font-weight:800}
+  .preset .pv-dots{display:inline-flex;gap:3px}
+  .preset .pv-dots i{width:11px;height:11px;border-radius:50%;box-shadow:inset 0 0 0 1px rgba(0,0,0,.12)}
+  .preset .px{border:none;background:#eef1f7;color:#8893a8;width:18px;height:18px;border-radius:50%;cursor:pointer;font-size:13px;line-height:1;display:grid;place-items:center;padding:0}
+  .preset .px:hover{background:#fde2e2;color:#b42318}
+  .preset-empty{font-size:12.5px;color:var(--faint)}
+
+  /* ---- Preview ---- */
+  .pv-head{display:flex;align-items:center;justify-content:space-between;margin-bottom:14px;gap:10px}
+  .pv-head h2{margin:0}
+  .screens{display:flex;gap:4px;background:#eef1f7;border:1px solid var(--line);border-radius:10px;padding:4px}
+  .screens button{border:none;background:none;font:inherit;font-size:12.5px;font-weight:600;color:var(--muted);padding:7px 13px;border-radius:7px;cursor:pointer}
+  .screens button.active{background:#fff;color:var(--ink);box-shadow:var(--shadow-sm)}
+  .device{border-radius:18px;overflow:hidden;border:1px solid var(--line);background:#000;box-shadow:var(--shadow-md)}
+  .device-bar{height:30px;background:#0b0f1e;display:flex;align-items:center;gap:6px;padding:0 12px}
+  .device-bar i{width:9px;height:9px;border-radius:50%;background:#3a4258;display:inline-block}
+  .stripe{height:8px;display:flex}
+  .stage{aspect-ratio:16/9;overflow:hidden;position:relative}
+  #pvScreen{position:absolute;inset:0;text-align:center}
+  #pvDesign{position:absolute;inset:0}
+  .de-el{position:absolute;cursor:move;touch-action:none}
+  .de-el.sel{outline:2px dashed #fff;outline-offset:3px;box-shadow:0 0 0 4px rgba(91,91,240,.5)}
+  .de-el .de-text2{line-height:1.15;white-space:pre-wrap;word-break:break-word}
+  .rz-handle,.rz-h{position:absolute;width:14px;height:14px;background:#6d6dfb;border:2px solid #fff;border-radius:3px;z-index:8;box-shadow:0 1px 3px rgba(0,0,0,.4)}
+  .rz-handle{right:-7px;bottom:-7px;cursor:nwse-resize}
+  .rz-h.n{top:-7px;left:50%;margin-left:-7px;cursor:ns-resize}
+  .rz-h.s{bottom:-7px;left:50%;margin-left:-7px;cursor:ns-resize}
+  .rz-h.e{right:-7px;top:50%;margin-top:-7px;cursor:ew-resize}
+  .rz-h.w{left:-7px;top:50%;margin-top:-7px;cursor:ew-resize}
+  .rz-h.ne{top:-7px;right:-7px;cursor:nesw-resize}
+  .rz-h.nw{top:-7px;left:-7px;cursor:nwse-resize}
+  .rz-h.se{bottom:-7px;right:-7px;cursor:nwse-resize}
+  .rz-h.sw{bottom:-7px;left:-7px;cursor:nesw-resize}
+  .de-el img{display:block;width:100%;height:auto;pointer-events:none}
+  /* editor toolbar + properties */
+  .editbar{display:flex;flex-wrap:wrap;gap:8px;align-items:center;margin-bottom:12px}
+  .editbar .btn{font-size:13px;padding:8px 13px}
+  .edit-hint{font-size:12px;color:var(--muted)}
+  .props{margin-top:14px;border:1px solid var(--line);border-radius:12px;padding:14px;background:#fafbfe}
+  .props .prow{display:flex;gap:10px;align-items:center;flex-wrap:wrap;margin-bottom:10px}
+  .props .prow:last-child{margin-bottom:0}
+  .props .pl{font-size:12px;font-weight:700;color:var(--muted);min-width:54px}
+  .props input[type=text]{flex:1;min-width:120px;padding:8px 10px;border:1px solid var(--line-strong);border-radius:8px;font:inherit;font-size:14px}
+  .props input[type=color]{width:40px;height:32px;border:1px solid var(--line-strong);border-radius:7px;padding:2px;background:#fff;cursor:pointer}
+  .props input[type=range]{flex:1;min-width:120px}
+  .props .seg{padding:4px}
+  .props .seg button{padding:6px 11px;font-size:12.5px}
+  .props .btn.del{background:#fee2e2;color:#b42318;border:1px solid #fecaca;font-size:13px;padding:8px 13px}
+  /* shared preview screen styles (themed via inline vars) */
+  .sc{width:100%;height:100%;display:flex;flex-direction:column;align-items:center;justify-content:center;gap:8px}
+  .sc-logo{max-width:38%;max-height:30%;display:block}
+  .sc-t1{font-family:"Anton",Impact,sans-serif;font-size:clamp(26px,5.6vw,56px);line-height:.92;letter-spacing:1.5px;margin:0}
+  .sc-t2{font-family:"Anton",Impact,sans-serif;font-size:clamp(14px,3.2vw,30px);letter-spacing:7px;margin:0}
+  .sc-row{display:flex;justify-content:space-between;width:100%;gap:10px;margin-bottom:4px}
+  .sc-badge,.sc-cat{font-family:"Anton",Impact,sans-serif;font-size:clamp(9px,1.7vw,15px);letter-spacing:1.5px;padding:6px 12px;border:2px solid #000;border-radius:8px;white-space:nowrap}
+  .sc-box{flex:1;display:flex;align-items:center;justify-content:center;gap:10px;width:100%;border:3px solid;border-radius:14px;
+    font-family:"Anton",Impact,sans-serif;font-size:clamp(15px,2.9vw,30px);line-height:1.1;padding:10px 14px}
+  .sc-num{font-family:"Anton",Impact,sans-serif;border:2px solid #000;border-radius:7px;padding:1px 9px;font-size:.9em;flex:0 0 auto}
+  .sc-howto{font-family:"Inter",sans-serif;font-weight:700;font-size:clamp(9px,1.7vw,15px);opacity:.95;line-height:1.3}
+  .sc-ans{width:100%;border-radius:12px;font-family:"Anton",Impact,sans-serif;font-size:clamp(13px,2.5vw,26px);padding:9px 14px;letter-spacing:1px}
+
+  /* ---- Output ---- */
+  .out-label{display:flex;align-items:center;justify-content:space-between;margin-bottom:8px}
+  .out-label .lbl{margin:0}
+  .copied{font-size:12.5px;font-weight:700;color:#0e9f6e;opacity:0;transition:opacity .2s}.copied.show{opacity:1}
+  .linkbox{display:flex;align-items:center;gap:8px;border:1px solid var(--line-strong);border-radius:11px;background:#f7f9fc;padding:6px 6px 6px 12px}
+  .linkbox input{flex:1;min-width:0;border:none;background:none;font-family:ui-monospace,Consolas,monospace;font-size:12.5px;color:#33415c;padding:6px 0}
+  .linkbox input:focus{outline:none}
+  .btn{border:none;border-radius:9px;font:inherit;font-weight:600;font-size:14px;padding:10px 16px;cursor:pointer;white-space:nowrap;text-decoration:none;display:inline-flex;align-items:center;gap:7px;transition:filter .15s,background .15s}
+  .btn:active{transform:translateY(1px)}
+  .btn.copy{background:#fff;color:var(--ink);border:1px solid var(--line-strong)}.btn.copy:hover{background:#f1f4f9}
+  .btn.primary{background:#eef1f6;color:#10182a;box-shadow:0 1px 2px rgba(0,0,0,.25)}.btn.primary:hover{background:#ffffff}
+  .btn.block{width:100%;justify-content:center;padding:13px;font-size:15px;margin-top:14px}
+  .steps{list-style:none;margin:16px 0 0;padding:14px 16px;background:var(--accent-soft);border:1px solid #e3e6ff;border-radius:11px}
+  .steps li{font-size:13px;color:#3b32b8;padding-left:24px;position:relative;margin:0 0 8px}.steps li:last-child{margin:0}
+  .steps li::before{position:absolute;left:0;top:0;width:17px;height:17px;border-radius:50%;background:var(--accent);color:#fff;font-size:11px;font-weight:700;display:grid;place-items:center}
+  .steps li:nth-child(1)::before{content:"1"}.steps li:nth-child(2)::before{content:"2"}.steps li:nth-child(3)::before{content:"3"}
+  .advanced{margin-top:6px}
+  .advanced summary{font-size:13px;font-weight:600;color:var(--muted);cursor:pointer;list-style:none}
+  .advanced summary::-webkit-details-marker{display:none}
+  .advanced summary::before{content:"⚙ "}
+
+  /* ===== Dark skin (overrides the light defaults of the form controls) ===== */
+  .inp{background:var(--field);color:var(--ink);border-color:var(--field-line)}
+  .inp::placeholder{color:var(--faint)}
+  .swatch{background:var(--field);border-color:var(--field-line)}
+  .swatch:hover{border-color:var(--accent)}
+  .swatch input[type=color]{box-shadow:inset 0 0 0 1px rgba(255,255,255,.18)}
+  .seg{background:var(--field);border-color:var(--field-line)}
+  .seg button.active{background:var(--field-hi);color:#fff}
+  .screens{background:var(--field);border-color:var(--field-line)}
+  .screens button.active{background:var(--field-hi);color:#fff}
+  .chip{background:var(--field);border-color:var(--field-line);color:var(--ink)}
+  .chip .dot{box-shadow:inset 0 0 0 1px rgba(255,255,255,.2)}
+  .btn.copy{background:var(--field);color:var(--ink);border-color:var(--field-line)}
+  .btn.copy:hover{background:var(--field-hi)}
+  .btn.copy.active{background:var(--accent);color:#fff;border-color:var(--accent)}
+  .linkbox{background:#0c1322;border-color:var(--field-line)}
+  .linkbox input{color:#c4d0ea}
+  .props{background:#101829;border-color:var(--field-line)}
+  .props input[type=text]{background:var(--field);color:var(--ink);border-color:var(--field-line)}
+  .props input[type=color]{background:var(--field);border-color:var(--field-line)}
+  .palette{background:#101829;border-color:var(--field-line)}
+  .pal-sel{background:var(--field);color:var(--ink);border-color:var(--field-line)}
+  .preset{background:var(--field);border-color:var(--field-line);color:var(--ink)}
+  .preset .px{background:#26324c;color:#aeb9d6}
+  .preset .px:hover{background:#4a1f24;color:#ff9b9b}
+  .chip .px{background:#26324c;color:#aeb9d6}
+  .chip .px:hover{background:#4a1f24;color:#ff9b9b}
+  .pal-add input[type=text]{background:var(--field);color:var(--ink);border-color:var(--field-line)}
+  .pal-add input[type=color]{background:var(--field);border-color:var(--field-line)}
+  .btn.del{background:rgba(239,68,68,.16);color:#ff9b9b;border-color:rgba(239,68,68,.4)}
+  .steps{background:rgba(109,109,251,.13);border-color:rgba(109,109,251,.28)}
+  .steps li{color:#cbcfff}
+  .steps li::before{background:var(--accent)}
+  /* Fullscreen editor — the card fills the screen with a big editable canvas */
+  #editorCard:-webkit-full-screen{background:var(--bg1);padding:18px 22px;overflow:auto;display:flex;flex-direction:column;gap:12px}
+  #editorCard:fullscreen{background:var(--bg1);padding:18px 22px;overflow:auto;display:flex;flex-direction:column;gap:12px}
+  #editorCard:fullscreen .device{width:min(94vw, 150vh);max-width:94vw;margin:0 auto;flex:0 0 auto}
+  #editorCard:fullscreen .props{max-width:900px;margin:0 auto;width:100%}
+  #editorCard:fullscreen .editbar{justify-content:center}
+  #editorCard:fullscreen .pv-head{max-width:900px;margin:0 auto;width:100%}
+  .pubstatus{font-size:12.5px;font-weight:600;margin:10px 0 4px;min-height:16px}
+  .pubstatus.ok{color:#5fd6a0}
+  .pubstatus.warn{color:#f2c14e}
+</style>
+</head>
+<body>
+  <div class="appbar">
+    <div class="logo-mark">🎯</div>
+    <div class="titles"><h1>Trivia Studio</h1><p>Version Builder — design a branded trivia, copy the link, go live</p></div>
+    <span class="pill">Live editor</span>
+  </div>
+
+  <div class="page">
+    <!-- LEFT: controls -->
+    <div class="card card-pad">
+      <div class="sec">
+        <div class="sec-h">Design templates</div>
+        <p class="help" style="margin-top:-4px">One-click full looks — colors, fonts &amp; background. Apply one, then tweak anything.</p>
+        <div class="preset-list" id="templateList"></div>
+      </div>
+      <div class="sec">
+        <div class="sec-h">Presets</div>
+        <div class="preset-list" id="presetList"></div>
+        <div style="display:flex;flex-wrap:wrap;gap:8px;margin-top:11px">
+          <button class="btn copy" type="button" id="newBlank">New (blank)</button>
+          <button class="btn copy" type="button" id="savePreset">Save as new</button>
+          <button class="btn copy" type="button" id="updatePreset" style="display:none">Update preset</button>
+        </div>
+      </div>
+      <div class="sec">
+        <div class="sec-h">Identity</div>
+        <div class="group">
+          <label class="lbl">Game type</label>
+          <div class="seg" id="modeSeg">
+            <button type="button" data-mode="paper" class="active">Paper / TV</button>
+            <button type="button" data-mode="phone">Paper + Join QR</button>
+          </div>
+          <p class="help"><b>Paper / TV:</b> host runs it, questions on the TVs, players answer on paper. <b>Phone:</b> players join &amp; answer on their phones (QR). Both use your brand below.</p>
+        </div>
+        <div class="group">
+          <label class="lbl" for="vname">Version name <span class="opt">— a label for you</span></label>
+          <input class="inp" type="text" id="vname" placeholder="e.g. Buffalo Wild Wings — Friday" />
+        </div>
+        <div class="group">
+          <label class="lbl">Title text <span class="opt">— two lines on the screen</span></label>
+          <div class="row2"><input class="inp" type="text" id="title1" value="TRIVIA" placeholder="Line 1" /><input class="inp" type="text" id="title2" value="NIGHT" placeholder="Line 2" /></div>
+        </div>
+        <div class="group">
+          <label class="lbl" for="logo">Logo <span class="opt">— optional</span></label>
+          <input class="inp" type="url" id="logo" placeholder="Paste an image URL  (https://…/logo.png)" />
+          <div class="uploadrow">
+            <label class="btn copy" style="cursor:pointer"><input type="file" id="logoFile" accept="image/png,image/jpeg,image/webp,image/svg+xml" hidden>⬆ Upload file</label>
+            <button class="btn copy" type="button" id="logoClear">Clear</button>
+            <button class="btn primary" type="button" id="useLogoColors" style="padding:9px 14px;font-size:13px">🎨 Use logo colors</button>
+          </div>
+          <div class="pubstatus" id="logoMsg" style="margin:6px 0 0"></div>
+          <p class="help">Pasted URL = short link. Uploaded file = embedded. <b>Use logo colors</b> builds your theme from the logo's colors (upload the file for best results).</p>
+        </div>
+      </div>
+
+      <div class="sec">
+        <div class="sec-h">Colors</div>
+        <div class="group">
+          <label class="lbl" for="brandSearch">🔎 Search a brand — auto-fill its colors</label>
+          <input class="inp" type="text" id="brandSearch" placeholder="Buffalo Wild Wings, Taco Mac, Coca-Cola…" autocomplete="off" />
+          <div id="brandResults" class="brand-results"></div>
+          <p class="help">Pick a brand to drop in its palette instantly, then fine-tune below. Not listed? Upload its logo above and hit <b>🎨 Use logo colors</b>.</p>
+        </div>
+        <div class="swatches">
+          <label class="swatch"><input type="color" id="primary" value="#c8102e"><span><div class="sw-name">Primary</div><div class="sw-hex" id="hxprimary">#c8102e</div></span></label>
+          <label class="swatch"><input type="color" id="accent" value="#f4c430"><span><div class="sw-name">Accent</div><div class="sw-hex" id="hxaccent">#f4c430</div></span></label>
+          <label class="swatch"><input type="color" id="deep" value="#1d3a8a"><span><div class="sw-name">Background</div><div class="sw-hex" id="hxdeep">#1d3a8a</div></span></label>
+          <label class="swatch"><input type="color" id="light" value="#f7f1e3"><span><div class="sw-name">Text / Light</div><div class="sw-hex" id="hxlight">#f7f1e3</div></span></label>
+        </div>
+        <div class="palette">
+          <div class="pal-head">
+            <span class="pal-title">Brand palette</span>
+            <label class="pal-apply">Apply to
+              <select id="palTarget" class="pal-sel">
+                <option value="primary">Primary</option>
+                <option value="accent">Accent</option>
+                <option value="deep">Background</option>
+                <option value="light">Text / Light</option>
+              </select>
+            </label>
+          </div>
+          <div class="chips" id="palChips"></div>
+          <div class="pal-add">
+            <input type="text" id="palName" placeholder="Color name (e.g. B-Dubs Gold)" />
+            <input type="color" id="palHex" value="#ffd200" />
+            <button class="btn copy" type="button" id="palAdd">＋ Add</button>
+          </div>
+        </div>
+        <div class="group" style="margin-top:16px">
+          <label class="lbl" style="display:flex;align-items:center;gap:8px;cursor:pointer"><input type="checkbox" id="boxCustom">Custom question-box colors</label>
+          <div id="boxColors" class="swatches" style="display:none;margin-top:8px">
+            <label class="swatch"><input type="color" id="boxBg" value="#142764"><span><div class="sw-name">Box fill</div><div class="sw-hex" id="hxboxBg">#142764</div></span></label>
+            <label class="swatch"><input type="color" id="boxBorder" value="#f4c430"><span><div class="sw-name">Box border</div><div class="sw-hex" id="hxboxBorder">#f4c430</div></span></label>
+          </div>
+          <p class="help">Off = the box matches your theme automatically. On = pick its own fill &amp; border.</p>
+        </div>
+        <div class="group">
+          <label class="lbl" for="boxWidth">Question box width — <span id="boxWidthVal">100%</span></label>
+          <input type="range" id="boxWidth" min="55" max="100" value="100" style="width:100%;accent-color:var(--accent)">
+        </div>
+      </div>
+
+      <div class="sec">
+        <div class="sec-h">Game background <span class="scope-chip" style="font-size:11px;font-weight:700;padding:3px 9px;border-radius:999px;background:var(--accent);color:#10182a;margin-left:8px;vertical-align:middle">Title screen</span></div>
+        <p class="help" style="margin-top:-4px">Each screen has its own background &amp; fonts. Pick a screen tab above the preview (Title / Question / Answer), then set its look here.</p>
+        <div class="group">
+          <label class="lbl" for="bgSel">Style</label>
+          <select class="inp" id="bgSel">
+            <optgroup label="Minimalist &amp; Clean">
+              <option value="gradient">Gradient</option>
+              <option value="solid">Solid &amp; Seamless</option>
+              <option value="monochrome">Monochrome</option>
+              <option value="duotone">Duotone</option>
+            </optgroup>
+            <optgroup label="Patterns &amp; Abstract">
+              <option value="dots">Dots</option>
+              <option value="grid">Grid</option>
+              <option value="geometric">Geometric</option>
+              <option value="stripes">Stripes</option>
+              <option value="watercolor">Watercolor</option>
+              <option value="plaid">Plaid / Tartan</option>
+              <option value="carbon">Carbon Fiber</option>
+            </optgroup>
+            <optgroup label="Atmospheric">
+              <option value="spotlight">Spotlight</option>
+              <option value="galaxy">Galaxy &amp; Space</option>
+              <option value="vintage">Vintage &amp; Retro</option>
+              <option value="neon">Neon Glow</option>
+              <option value="rays">Sunburst Rays</option>
+              <option value="bokeh">Bokeh Lights</option>
+              <option value="aurora">Aurora</option>
+              <option value="waves">Waves</option>
+            </optgroup>
+            <optgroup label="Texture / Photo">
+              <option value="image">Image — wood, marble, nature… (upload or URL)</option>
+            </optgroup>
+          </select>
+          <div id="bgImgWrap" style="display:none;margin-top:10px">
+            <input class="inp" type="url" id="bgimg" placeholder="https://…/background.jpg" />
+            <div class="uploadrow"><label class="btn copy" style="cursor:pointer">⬆ Upload photo<input type="file" id="bgImgFile" accept="image/png,image/jpeg,image/webp" hidden></label><button class="btn copy" type="button" id="bgImgRemove">✕ Remove image</button></div>
+            <div style="margin-top:9px"><label class="lbl" for="bgFit">Fit</label><select class="inp" id="bgFit">
+              <option value="cover">Cover — fill the screen (may crop edges)</option>
+              <option value="contain">Contain — show the whole image</option>
+              <option value="stretch">Stretch — fill exactly (may distort)</option>
+            </select></div>
+          </div>
+          <p class="help">CSS styles are built from your <b>Background</b> color. For real photo textures (wood, marble, brick, nature, galaxy photos…) choose <b>Image</b> and upload or paste one.</p>
+        </div>
+        <div class="group">
+          <label class="lbl">My backgrounds</label>
+          <div class="uploadrow"><label class="btn copy" style="cursor:pointer">➕ Add background image<input type="file" id="bgAddFile" accept="image/png,image/jpeg,image/webp" multiple hidden></label></div>
+          <div id="bgGallery" class="bg-gallery"></div>
+          <p class="help">Upload your own background photos, then click one to use it on this screen. Saved on this device for reuse across versions.</p>
+        </div>
+        <div class="group">
+          <label class="lbl" for="dim">Dim background — <span id="dimVal">0%</span></label>
+          <input type="range" id="dim" min="0" max="85" value="0" style="width:100%;accent-color:var(--accent)">
+          <p class="help">Darkens the background so the text and question box stand out — great for bright photos.</p>
+        </div>
+      </div>
+      <div class="sec">
+        <div class="sec-h">Fonts <span class="scope-chip" style="font-size:11px;font-weight:700;padding:3px 9px;border-radius:999px;background:var(--accent);color:#10182a;margin-left:8px;vertical-align:middle">Title screen</span></div>
+        <div class="group">
+          <label class="lbl" for="titleFont">Title font</label>
+          <select class="inp" id="titleFont"></select>
+        </div>
+        <div class="group">
+          <label class="lbl" for="qFont">Question &amp; answer font</label>
+          <select class="inp" id="qFont"></select>
+        </div>
+        <div class="group">
+          <label class="lbl" for="labelFont">Category &amp; badge font</label>
+          <select class="inp" id="labelFont"></select>
+        </div>
+        <button class="btn copy" type="button" id="randomBtn">🎲 Randomize fonts &amp; background</button>
+        <div class="group" style="margin-top:12px;border-top:1px solid var(--line);padding-top:12px">
+          <label class="lbl">Import a font</label>
+          <div style="display:flex;gap:8px">
+            <input class="inp" type="text" id="fontImport" placeholder="Google Font name (e.g. Lobster Two)" style="flex:1" autocomplete="off" />
+            <button class="btn copy" type="button" id="fontImportBtn">➕ Add</button>
+          </div>
+          <div class="uploadrow" style="margin-top:8px"><label class="btn copy" style="cursor:pointer">⬆ Upload font file<input type="file" id="fontFile" accept=".ttf,.otf,.woff,.woff2,font/*" hidden></label></div>
+          <div id="fontMsg" class="pubstatus" style="margin-top:6px"></div>
+          <p class="help">Type a name from <b>fonts.google.com</b>, or upload your own <b>.ttf / .otf / .woff</b>. Imported fonts show up in the dropdowns above and travel with your published design.</p>
+        </div>
+      </div>
+
+      <div class="sec">
+        <div class="sec-h">Preview text <span style="color:var(--faint);font-weight:500;text-transform:none;letter-spacing:0">— just to see your brand (not saved)</span></div>
+        <div class="group">
+          <input class="inp" type="text" id="scat" value="FOOD &amp; DRINK" placeholder="Sample category" style="margin-bottom:10px" />
+          <input class="inp" type="text" id="squestion" value="The Scoville scale measures what property of food?" placeholder="Sample question" style="margin-bottom:10px" />
+          <input class="inp" type="text" id="sanswer" value="Spicy heat" placeholder="Sample answer" />
+        </div>
+      </div>
+
+      <div class="sec">
+        <details class="advanced">
+          <summary>Advanced</summary>
+          <div class="group" style="margin-top:14px">
+            <label class="lbl" for="base">Engine link <span class="opt">— where the game is hosted</span></label>
+            <input class="inp" type="text" id="base" value="https://slava-limcher.github.io/Pluckers-Trivia-paper-version-/" />
+          </div>
+        </details>
+      </div>
+    </div>
+
+    <!-- RIGHT: preview + output -->
+    <div class="right">
+      <div class="card card-pad" id="editorCard">
+        <div class="pv-head">
+          <h2>Live editor</h2>
+          <div style="display:flex;gap:8px;align-items:center;flex-wrap:wrap">
+            <div class="screens" id="screens">
+              <button data-sc="title" class="active">Title</button>
+              <button data-sc="question">Question</button>
+              <button data-sc="answer">Answer</button>
+              <button data-sc="standings">Standings</button>
+              <button data-sc="winner">Winner</button>
+              <button data-sc="phone" class="phone-only" style="display:none">📱 Phone</button>
+            </div>
+            <button class="btn copy" id="fsBtn" type="button" title="Fullscreen edit" style="padding:7px 12px;font-size:15px">⛶</button>
+          </div>
+        </div>
+        <div class="editbar">
+          <button class="btn copy" type="button" id="addText">＋ Text box</button>
+          <label class="btn copy" style="cursor:pointer">＋ Image<input type="file" id="addImg" accept="image/png,image/jpeg,image/webp,image/svg+xml" hidden></label>
+          <button class="btn copy" type="button" id="freeLayout">↔ Move built-in items</button>
+          <span class="edit-hint">Drag anything to place • click to edit</span>
+        </div>
+        <div class="device">
+          <div class="device-bar"><i></i><i></i><i></i></div>
+          <div class="stripe" id="pvStripe"></div>
+          <div class="stage" id="pvStage">
+            <div id="pvScreen"></div>
+            <div id="pvDesign"></div>
+          </div>
+        </div>
+        <div class="props" id="props" style="display:none"></div>
+      </div>
+
+      <div class="card card-pad">
+        <button class="btn primary block" id="publishBtn" style="margin-top:0">🚀 Publish version &amp; get link</button>
+        <div class="pubstatus" id="pubStatus"></div>
+        <div class="out-label"><label class="lbl">Your version link</label><span class="copied" id="copied">✓ Copied</span></div>
+        <div class="linkbox"><input type="text" id="hostLink" readonly placeholder="Click Publish to create your shareable link" /><button class="btn copy" id="copyBtn">Copy</button></div>
+        <a class="btn primary block" id="openHost" target="_blank" rel="noopener" href="#">Open this version →</a>
+        <ol class="steps">
+          <li>Open the link on the host computer.</li>
+          <li>Click <b>📺 Go Live</b> and name the location.</li>
+          <li>Open the TV link it gives you — TVs match the brand automatically.</li>
+        </ol>
+      </div>
+    </div>
+  </div>
+
+<script>
+  const $ = id => document.getElementById(id);
+  const COLORS = ["primary","accent","deep","light"];
+  const inputs = ["title1","title2","logo","base","vname","scat","squestion","sanswer",...COLORS];
+  let bgStyle = "gradient", screen = "title", gameMode = "paper";
+  // Per-screen look: each screen (title/question/answer) keeps its OWN background +
+  // fonts, so they can differ. The Game-background + Fonts controls edit whichever
+  // screen tab is active above the preview.
+  const SCREENS = { title:null, question:null, answer:null, standings:null, winner:null, phone:null };
+  function readBgFonts(){ return { bg:bgStyle, bgimg:($("bgimg")?$("bgimg").value.trim():""), fit:($("bgFit")?$("bgFit").value:"cover"), dim:+(($("dim")&&$("dim").value)||0), font:($("titleFont")?$("titleFont").value:""), qfont:($("qFont")?$("qFont").value:""), labelfont:($("labelFont")?$("labelFont").value:"") }; }
+  function writeBgFonts(s){ s=s||{}; bgStyle=s.bg||"gradient"; if($("bgSel"))$("bgSel").value=bgStyle; if($("bgimg"))$("bgimg").value=s.bgimg||""; if($("bgFit"))$("bgFit").value=s.fit||"cover"; if($("bgImgWrap"))$("bgImgWrap").style.display=bgStyle==="image"?"block":"none"; if($("dim")){$("dim").value=s.dim||0;$("dimVal").textContent=($("dim").value)+"%";} if($("titleFont"))$("titleFont").value=s.font||""; if($("qFont"))$("qFont").value=s.qfont||""; if($("labelFont"))$("labelFont").value=s.labelfont||""; }
+  function updateBgScope(){ const lbl=screen==="title"?"Title screen":screen==="question"?"Question screen":"Answer screen"; document.querySelectorAll(".scope-chip").forEach(c=>c.textContent=lbl); }
+  const PAPER_BASE = "https://slava-limcher.github.io/Trivia-Tool/";
+  // Public address for the phone engine (deployed alongside the paper game on GitHub
+  // Pages). Hardcoded so published links never point at localhost — open links keep
+  // working after the local dev server stops and on other devices/phones.
+  const PHONE_BASE = "https://slava-limcher.github.io/Pluckers-Trivia-paper-version-/trivia-wings/";
+  const phoneBase = () => PHONE_BASE;
+  let els = [], selId = null, slots = {}, selBuiltin = null;
+  const SLOT_DEFAULTS = {
+    question:{ logo:{x:1.5,y:5}, badge:{x:1.5,y:6}, category:{x:73,y:6}, score:{x:37,y:5}, box:{x:1.5,y:19,w:97,h:55}, num:{x:4,y:44}, howto:{x:15,y:80}, next:{x:38,y:88}, hint:{x:22,y:95} },
+    answer:{ badge:{x:1.5,y:6}, category:{x:73,y:6}, score:{x:37,y:5}, box:{x:1.5,y:17,w:97,h:40}, num:{x:4,y:34}, answer:{x:18,y:66} },
+    standings:{ fbtitle:{x:18,y:32}, fbmsg:{x:30,y:46}, fbbtn:{x:41,y:54}, fbhint:{x:40,y:64} },
+    winner:{ winburst:{x:47,y:34}, winlabel:{x:35,y:46}, winname:{x:38,y:56}, winbtn:{x:42,y:68} },
+    title:{}
+  };
+  const DESIGN_ID = "d" + Math.random().toString(36).slice(2, 9);
+  const newId = () => "e" + Math.random().toString(36).slice(2, 8);
+  const boxOn = () => $("boxCustom") && $("boxCustom").checked;
+  const themeObj = () => {
+    const sc = {};
+    ["title","question","answer","standings","winner","phone"].forEach(k=>{ sc[k] = Object.assign({}, SCREENS[k]||{}); });
+    sc[screen] = readBgFonts();   // capture live edits to the active screen
+    const base = sc.question || sc.title || readBgFonts();   // global fallback (misc states + phone)
+    return { title1:$("title1").value, title2:$("title2").value, primary:$("primary").value, accent:$("accent").value, deep:$("deep").value, light:$("light").value, logo:$("logo").value.trim(),
+      bg:base.bg, bgimg:base.bgimg, fit:base.fit, font:base.font, qfont:base.qfont, labelfont:base.labelfont, dim:base.dim,
+      boxBg:(boxOn()?$("boxBg").value:""), boxBorder:(boxOn()?$("boxBorder").value:""), boxW:($("boxWidth")?+$("boxWidth").value:100), mode:gameMode, screens:sc,
+      fontFaces:(typeof CUSTOM_FONTS!=="undefined"?CUSTOM_FONTS.filter(c=>c.src).map(c=>({family:familyOf(c.f),src:c.src})):[]) };
+  };
+  // Theme as URL params (used for PHONE versions — the phone engine reads these directly).
+  function themeParams(){
+    const t=themeObj(); const p=new URLSearchParams();
+    // Skip base64 data: blobs (uploaded logo/bg image) — they blow the URL past the
+    // server header limit (HTTP 431). Those ride in the cloud design instead.
+    ["title1","title2","logo","bg","bgimg","font","qfont","labelfont","boxBg","boxBorder"].forEach(k=>{ if(t[k] && !/^data:/.test(t[k])) p.set(k,t[k]); });
+    ["primary","accent","deep","light"].forEach(k=>p.set(k,String(t[k]).replace('#','')));
+    if(t.boxW&&t.boxW!=100) p.set("boxW",t.boxW);
+    if(t.dim) p.set("dim",t.dim);
+    return p.toString();
+  }
+  let published = false;
+  function markEdited(){ if(published){ const st=$("pubStatus"); if(st){ st.textContent="✱ Edited — click Publish to update the live link."; st.className="pubstatus warn"; } } }
+  function saveDesign(){ try{ localStorage.setItem("trivia-design-"+DESIGN_ID, JSON.stringify({v:1, theme:themeObj(), els, slots})); }catch(e){} markEdited(); }
+  function updateLink(){ /* link is created on Publish now */ }
+
+  // ---- Cloud publish (saves the design + images to Supabase; link stays short) ----
+  const SUPABASE_URL = "https://yfatjubmmnykwopnuoyk.supabase.co";
+  const SUPABASE_ANON_KEY = "sb_publishable_KcWaVrtqXLfIt80bHliCCw_V9kLdvVV";
+  let supa = null;
+  function supaClient(){ if(!supa && window.supabase) supa = window.supabase.createClient(SUPABASE_URL, SUPABASE_ANON_KEY); return supa; }
+  function baseUrl(){ return $("base").value.trim().replace(/index\.html.*$/,"").replace(/\/+$/,"")+"/index.html"; }
+  // Both modes use a short cloud link (?design=id) so an uploaded logo / bg image
+  // never bloats the URL (which caused HTTP 431). If the cloud is unreachable, the
+  // PHONE mode falls back to a logo-free param link; PAPER falls back to the local id.
+  // Phone links also carry the id in the hash (#design=) so the brand survives local
+  // servers that strip the query string on clean-URL redirects.
+  function versionLink(){ const u=baseUrl()+"?design="+DESIGN_ID; return gameMode==="phone" ? u+"#design="+DESIGN_ID : u; }
+  function setLink(link){ $("hostLink").value=link; $("openHost").href=link; }
+  async function publish(){
+    saveDesign();
+    const st=$("pubStatus"); const base=baseUrl(); const designLink=base+"?design="+DESIGN_ID+(gameMode==="phone"?"#design="+DESIGN_ID:"");
+    const c=supaClient();
+    if(!c){
+      published=true;
+      setLink(designLink);   // both versions are the paper engine now (mode rides in the design)
+      st.textContent = "⚠ Cloud unavailable — this link only works on this device.";
+      st.className="pubstatus warn"; return;
+    }
+    st.textContent="Publishing…"; st.className="pubstatus";
+    const payload={ room_code:"dsgn_"+DESIGN_ID, state:JSON.stringify({design:{theme:themeObj(), els, slots}}), updated_at:new Date().toISOString() };
+    const kb=Math.round(payload.state.length/1024);
+    let lastErr=null;
+    for(let attempt=0; attempt<2; attempt++){
+      try{
+        const { error } = await c.from("sessions").upsert(payload,{ onConflict:"room_code" });
+        if(error) throw error;
+        published=true; setLink(designLink);
+        st.textContent = gameMode==="phone"
+          ? "✓ Published — players scan the on-screen QR to answer on their phones (works on any device)."
+          : "✓ Published — your link works on any device (logo & images included).";
+        st.className="pubstatus ok"; return;
+      }catch(e){ lastErr=e; }
+    }
+    // both attempts failed — give a size-aware hint (big designs time out the upload)
+    published=true;
+    setLink(designLink);
+    st.textContent = (kb>1100)
+      ? "⚠ Couldn't publish — your design is large ("+kb+" KB). Use a smaller background photo or remove an uploaded font, then try again. (Link works on this device.)"
+      : "Couldn't reach the cloud: "+((lastErr&&lastErr.message)||lastErr)+" — link works on this device.";
+    st.className="pubstatus warn";
+  }
+
+  // ---- Presets: save/load a full look (theme + placed text & images) ----
+  const BUILTIN_PRESETS = [
+    {name:"Pluckers", theme:{title1:"TRIVIA",title2:"NIGHT",primary:"#c8102e",accent:"#f4c430",deep:"#1d3a8a",light:"#f7f1e3",bg:"gradient",bgimg:"",logo:""}, els:[]},
+    {name:"Buffalo Wild Wings", theme:{title1:"TRIVIA",title2:"NIGHT",primary:"#FFD200",accent:"#FFFFFF",deep:"#161616",light:"#FFFFFF",bg:"gradient",bgimg:"",logo:""}, els:[]},
+    {name:"Twin Peaks", theme:{title1:"TRIVIA",title2:"NIGHT",primary:"#B11F1A",accent:"#F2E8D4",deep:"#262422",light:"#F2E8D4",bg:"gradient",bgimg:"",logo:""}, els:[]}
+  ];
+  // Presets can embed full background/logo images + uploaded fonts, which blow past
+  // localStorage's ~5MB cap — the save then fails silently and the preset vanishes on
+  // reload. Store them in IndexedDB instead (far larger quota) and migrate any presets
+  // previously saved in localStorage so existing ones aren't lost.
+  const PRESET_DB = "trivia-studio", PRESET_STORE = "kv", PRESET_KEY = "trivia-presets";
+  function idbOpen(){ return new Promise(function(res,rej){ var r=indexedDB.open(PRESET_DB,1); r.onupgradeneeded=function(){ if(!r.result.objectStoreNames.contains(PRESET_STORE)) r.result.createObjectStore(PRESET_STORE); }; r.onsuccess=function(){res(r.result);}; r.onerror=function(){rej(r.error);}; }); }
+  function idbGet(k){ return idbOpen().then(function(db){ return new Promise(function(res,rej){ var q=db.transaction(PRESET_STORE,"readonly").objectStore(PRESET_STORE).get(k); q.onsuccess=function(){res(q.result);}; q.onerror=function(){rej(q.error);}; }); }); }
+  function idbSet(k,v){ return idbOpen().then(function(db){ return new Promise(function(res,rej){ var q=db.transaction(PRESET_STORE,"readwrite").objectStore(PRESET_STORE).put(v,k); q.onsuccess=function(){res(true);}; q.onerror=function(){rej(q.error);}; }); }); }
+  let PRESETS = [];
+  async function loadPresetsAsync(){
+    try {
+      var v = await idbGet(PRESET_KEY);
+      if (Array.isArray(v)) { PRESETS = v; }
+      else {   // one-time migration from the old localStorage store
+        try { var raw = localStorage.getItem(PRESET_KEY); if (raw) { PRESETS = JSON.parse(raw) || []; if (PRESETS.length) await idbSet(PRESET_KEY, PRESETS); } } catch(e){}
+      }
+    } catch(e){ PRESETS = []; }
+    renderPresets();
+  }
+  async function savePresets(){
+    try { await idbSet(PRESET_KEY, PRESETS); return true; }
+    catch(e){ alert("Couldn't save the preset — storage error: " + ((e&&e.name)||e) + "\nTry deleting an old preset, or remove a very large uploaded background/font from this look."); return false; }
+  }
+  // The saved preset currently loaded (so "Update preset" knows which to overwrite). null = none.
+  let activePreset = null;
+  // A completely blank canvas to start a brand-new look from scratch: no title, no logo,
+  // no placed elements, neutral colors on a plain white background.
+  const BLANK_PRESET = { name:"Blank", theme:{ title1:"", title2:"", primary:"#444444", accent:"#999999", deep:"#FFFFFF", light:"#111111", bg:"solid", bgimg:"", logo:"", font:"", qfont:"", labelfont:"", dim:0, boxBg:"", boxBorder:"", boxW:100, mode:"paper", screens:{} }, els:[], slots:{} };
+  function refreshPresetButtons(){
+    const u=$("updatePreset"); if(!u) return;
+    if(activePreset!=null && PRESETS[activePreset]){ u.style.display=""; u.textContent="Update “"+PRESETS[activePreset].name+"”"; }
+    else { u.style.display="none"; }
+  }
+  function setTheme(t){
+    gameMode = t.mode==="phone" ? "phone" : "paper";
+    document.querySelectorAll("#modeSeg button").forEach(x=>x.classList.toggle("active",x.dataset.mode===gameMode));
+    if($("base")) $("base").value = PAPER_BASE;   // both versions run on the paper engine
+    $("title1").value=(t.title1!=null)?t.title1:"TRIVIA"; $("title2").value=t.title2||"";
+    ["primary","accent","deep","light"].forEach(k=>{ if(t[k]) $(k).value=t[k]; });
+    $("logo").value=(t.logo&&t.logo!=="none")?t.logo:"";
+    bgStyle=t.bg||"gradient";
+    if($("bgSel")) $("bgSel").value=bgStyle;
+    $("bgimg").value=t.bgimg||""; if($("bgImgWrap")) $("bgImgWrap").style.display=bgStyle==="image"?"block":"none";
+    if($("titleFont")) $("titleFont").value=t.font||"";
+    if($("qFont")) $("qFont").value=t.qfont||"";
+    if($("labelFont")) $("labelFont").value=t.labelfont||"";
+    if($("boxWidth")){ $("boxWidth").value=t.boxW||100; $("boxWidthVal").textContent=($("boxWidth").value)+"%"; }
+    if($("dim")){ $("dim").value=t.dim||0; $("dimVal").textContent=($("dim").value)+"%"; }
+    if($("boxCustom")){
+      const has=!!(t.boxBg||t.boxBorder);
+      $("boxCustom").checked=has; $("boxColors").style.display=has?"grid":"none";
+      if(t.boxBg) $("boxBg").value=t.boxBg; if(t.boxBorder) $("boxBorder").value=t.boxBorder;
+    }
+    // Per-screen looks: use t.screens if present, else replicate the single bg/fonts
+    // to all three screens (backward compatible with older designs/presets).
+    const one={ bg:t.bg||"gradient", bgimg:t.bgimg||"", fit:t.fit||"cover", dim:t.dim||0, font:t.font||"", qfont:t.qfont||"", labelfont:t.labelfont||"" };
+    ["title","question","answer","standings","winner","phone"].forEach(k=>{ SCREENS[k]= (t.screens&&t.screens[k]) ? Object.assign({},one,t.screens[k]) : Object.assign({},one); });
+    // Imported (uploaded) fonts carried by the design — embed them + list them.
+    if(Array.isArray(t.fontFaces) && typeof addImportedFont==="function") t.fontFaces.forEach(ff=>{ if(ff&&ff.family&&ff.src) addImportedFont({n:ff.family, f:"'"+ff.family+"',sans-serif", src:ff.src}); });
+    writeBgFonts(SCREENS[screen]); updateBgScope();
+  }
+  function applyPreset(p, idx){ setTheme(p.theme||{}); els=(p.els||[]).map(e=>Object.assign({},e)); slots = p.slots ? JSON.parse(JSON.stringify(p.slots)) : {}; selBuiltin=null; selId=null; activePreset = (typeof idx==="number") ? idx : null; refresh(); renderProps(); if(typeof syncFreeBtn==="function") syncFreeBtn(); if(typeof refreshPresetButtons==="function") refreshPresetButtons(); renderPresets(); }
+  // Ready-made design templates — full looks (colors + fonts + background). Apply, then tweak.
+  const TEMPLATES=[
+    {name:"Classic Pub", theme:{title1:"TRIVIA",title2:"NIGHT",primary:"#B11116",accent:"#E8A33D",deep:"#241C14",light:"#FFF7E8",bg:"gradient",font:"'Patua One',serif",qfont:"'Patua One',serif",labelfont:"'Oswald',sans-serif",boxBg:"#2A2018",boxBorder:"#E8A33D"}, els:[]},
+    {name:"Neon Night", theme:{title1:"TRIVIA",title2:"NIGHT",primary:"#FF2D6F",accent:"#00E5FF",deep:"#0A0A18",light:"#FFFFFF",bg:"neon",font:"'Monoton',cursive",qfont:"'Audiowide',cursive",labelfont:"'Orbitron',sans-serif",boxBg:"#12122A",boxBorder:"#00E5FF"}, els:[]},
+    {name:"Sports Arena", theme:{title1:"TRIVIA",title2:"NIGHT",primary:"#D50A0A",accent:"#FFFFFF",deep:"#0A1A3A",light:"#FFFFFF",bg:"geometric",font:"'Russo One',sans-serif",qfont:"'Russo One',sans-serif",labelfont:"'Teko',sans-serif",boxBg:"#0E2148",boxBorder:"#FFFFFF"}, els:[]},
+    {name:"Retro Arcade", theme:{title1:"TRIVIA",title2:"NIGHT",primary:"#B14CFF",accent:"#00E5FF",deep:"#120A2A",light:"#FFFFFF",bg:"grid",font:"'Press Start 2P',monospace",qfont:"'Russo One',sans-serif",labelfont:"'Press Start 2P',monospace",boxBg:"#1A0E3A",boxBorder:"#00E5FF"}, els:[]},
+    {name:"Elegant Lounge", theme:{title1:"TRIVIA",title2:"NIGHT",primary:"#C8A04B",accent:"#F2E8D4",deep:"#14110C",light:"#F2E8D4",bg:"spotlight",font:"'Playfair Display',serif",qfont:"'Playfair Display',serif",labelfont:"'Montserrat',sans-serif",boxBg:"#1E1A12",boxBorder:"#C8A04B"}, els:[]},
+    {name:"Chalkboard", theme:{title1:"TRIVIA",title2:"NIGHT",primary:"#E8E2D0",accent:"#7FB069",deep:"#1E2A22",light:"#F4F0E4",bg:"solid",font:"'Caveat',cursive",qfont:"'Caveat',cursive",labelfont:"'Special Elite',cursive",boxBg:"#243029",boxBorder:"#E8E2D0"}, els:[]},
+    {name:"Western Saloon", theme:{title1:"TRIVIA",title2:"NIGHT",primary:"#8B5A2B",accent:"#E8A33D",deep:"#2A1C10",light:"#FFF1D6",bg:"vintage",font:"'Rye',cursive",qfont:"'Rye',cursive",labelfont:"'Rye',cursive",boxBg:"#3A2616",boxBorder:"#E8A33D"}, els:[]},
+    {name:"Game Show", theme:{title1:"TRIVIA",title2:"NIGHT",primary:"#FFC72C",accent:"#1D4ED8",deep:"#1A1030",light:"#FFFFFF",bg:"spotlight",font:"'Bungee',cursive",qfont:"'Bungee',cursive",labelfont:"'Luckiest Guy',cursive",boxBg:"#2A1A50",boxBorder:"#FFC72C"}, els:[]},
+    {name:"Aurora Glow", theme:{title1:"TRIVIA",title2:"NIGHT",primary:"#00E5C0",accent:"#B14CFF",deep:"#0A1428",light:"#FFFFFF",bg:"aurora",font:"'Orbitron',sans-serif",qfont:"'Russo One',sans-serif",labelfont:"'Orbitron',sans-serif",boxBg:"#0E1E3A",boxBorder:"#00E5C0"}, els:[]},
+    {name:"Carbon Sport", theme:{title1:"TRIVIA",title2:"NIGHT",primary:"#E5202E",accent:"#C8C8C8",deep:"#161719",light:"#FFFFFF",bg:"carbon",font:"'Russo One',sans-serif",qfont:"'Teko',sans-serif",labelfont:"'Teko',sans-serif",boxBg:"#202225",boxBorder:"#E5202E"}, els:[]}
+  ];
+  function renderPresets(){
+    const wrap=$("presetList"); if(!wrap) return;
+    const dots=t=>`<span class="pv-dots"><i style="background:${t.primary}"></i><i style="background:${t.accent}"></i><i style="background:${t.deep}"></i></span>`;
+    let html=BUILTIN_PRESETS.map((p,i)=>`<span class="preset" data-b="${i}">${dots(p.theme)}${esc(p.name)}</span>`).join("");
+    html+=PRESETS.map((p,i)=>`<span class="preset${activePreset===i?' active':''}" data-s="${i}">${dots(p.theme)}${esc(p.name)}<button class="px" data-del="${i}" title="Delete preset">×</button></span>`).join("");
+    wrap.innerHTML=html||'<span class="preset-empty">No saved presets yet — design a look, then save it.</span>';
+    wrap.querySelectorAll(".preset").forEach(el=>el.addEventListener("click",ev=>{
+      if(ev.target.classList.contains("px")) return;
+      if(el.dataset.b!==undefined) applyPreset(BUILTIN_PRESETS[+el.dataset.b]);
+      else applyPreset(PRESETS[+el.dataset.s], +el.dataset.s);
+    }));
+    wrap.querySelectorAll(".px").forEach(b=>b.addEventListener("click",ev=>{ ev.stopPropagation(); const di=+b.dataset.del; PRESETS.splice(di,1); if(activePreset===di) activePreset=null; else if(activePreset!=null && di<activePreset) activePreset--; savePresets(); renderPresets(); refreshPresetButtons(); }));
+  }
+  function renderTemplates(){
+    const wrap=$("templateList"); if(!wrap) return;
+    const dots=t=>`<span class="pv-dots"><i style="background:${t.primary}"></i><i style="background:${t.accent}"></i><i style="background:${t.deep}"></i></span>`;
+    wrap.innerHTML=TEMPLATES.map((p,i)=>`<span class="preset" data-t="${i}">${dots(p.theme)}${esc(p.name)}</span>`).join("");
+    wrap.querySelectorAll(".preset").forEach(el=>el.addEventListener("click",()=>applyPreset(TEMPLATES[+el.dataset.t])));
+  }
+  const darken=(h,a)=>{const n=parseInt(h.replace('#',''),16);return '#'+[(n>>16)&255,(n>>8)&255,n&255].map(x=>Math.round(x*(1-a)).toString(16).padStart(2,'0')).join('')};
+  const lighten=(h,a)=>{const n=parseInt(h.replace('#',''),16);return '#'+[(n>>16)&255,(n>>8)&255,n&255].map(x=>Math.round(x+(255-x)*a).toString(16).padStart(2,'0')).join('')};
+  const esc=s=>String(s).replace(/&/g,'&amp;').replace(/</g,'&lt;').replace(/>/g,'&gt;');
+  const FONTS=[
+    {n:"Anton (default)",f:""},{n:"Bebas Neue",f:"'Bebas Neue',sans-serif"},{n:"Oswald",f:"'Oswald',sans-serif"},
+    {n:"Archivo Black",f:"'Archivo Black',sans-serif"},{n:"Fredoka",f:"'Fredoka',sans-serif"},{n:"Poppins",f:"'Poppins',sans-serif"},
+    {n:"Montserrat",f:"'Montserrat',sans-serif"},{n:"Playfair Display (elegant)",f:"'Playfair Display',serif"},
+    {n:"Bungee",f:"'Bungee',cursive"},{n:"Righteous",f:"'Righteous',cursive"},{n:"Lobster (script)",f:"'Lobster',cursive"},
+    {n:"Pacifico (script)",f:"'Pacifico',cursive"},{n:"Permanent Marker",f:"'Permanent Marker',cursive"},
+    {n:"Rye (Western)",f:"'Rye',cursive"},{n:"Monoton (Neon)",f:"'Monoton',cursive"},{n:"Press Start 2P (Retro)",f:"'Press Start 2P',monospace"},
+    {n:"Teko (tall)",f:"'Teko',sans-serif"},{n:"Russo One",f:"'Russo One',sans-serif"},{n:"Black Ops One",f:"'Black Ops One',cursive"},
+    {n:"Staatliches",f:"'Staatliches',cursive"},{n:"Alfa Slab One (heavy)",f:"'Alfa Slab One',cursive"},{n:"Titan One (chunky)",f:"'Titan One',cursive"},
+    {n:"Luckiest Guy (fun)",f:"'Luckiest Guy',cursive"},{n:"Bangers (comic)",f:"'Bangers',cursive"},{n:"Fjalla One",f:"'Fjalla One',sans-serif"},
+    {n:"Abril Fatface (elegant)",f:"'Abril Fatface',serif"},{n:"Lilita One (rounded)",f:"'Lilita One',cursive"},{n:"Audiowide (techno)",f:"'Audiowide',cursive"},
+    {n:"Orbitron (sci-fi)",f:"'Orbitron',sans-serif"},{n:"Chewy (fun)",f:"'Chewy',cursive"},{n:"Concert One",f:"'Concert One',cursive"},
+    {n:"Patua One (slab)",f:"'Patua One',serif"},{n:"Sigmar One",f:"'Sigmar One',cursive"},{n:"Special Elite (typewriter)",f:"'Special Elite',cursive"},
+    {n:"Caveat (handwritten)",f:"'Caveat',cursive"},{n:"Creepster (spooky)",f:"'Creepster',cursive"}
+  ];
+  const fontOptions=sel=>FONTS.map(o=>`<option value="${o.f.replace(/"/g,'&quot;')}"${sel===o.f?' selected':''}>${o.n}</option>`).join("");
+  // Build the CSS background for a style — kept identical to the engine so preview = game.
+  function bgBackground(style,t){
+    const D=t.deep,P=t.primary,A=t.accent;
+    const dark=darken(D,.34),mid=darken(D,.58),bot=darken(D,.74),bright=lighten(D,.18);
+    switch(style){
+      case "solid": return D;
+      case "monochrome": return `linear-gradient(180deg, ${lighten(D,.14)} 0%, ${D} 45%, ${darken(D,.5)} 100%)`;
+      case "duotone": return `linear-gradient(135deg, ${darken(D,.2)} 0%, ${darken(P,.12)} 100%)`;
+      case "spotlight": return `radial-gradient(1100px 720px at 50% -8%, ${bright} 0%, ${mid} 42%, ${bot} 100%)`;
+      case "stripes": return `repeating-linear-gradient(45deg, rgba(255,255,255,.05) 0 16px, transparent 16px 34px), radial-gradient(1400px 900px at 50% -15%, ${dark} 0%, ${mid} 60%, ${bot} 100%)`;
+      case "dots": return `radial-gradient(${lighten(D,.13)} 2px, transparent 2.6px) 0 0 / 30px 30px, ${bot}`;
+      case "grid": return `linear-gradient(${lighten(D,.12)} 1px, transparent 1px) 0 0/46px 46px, linear-gradient(90deg, ${lighten(D,.12)} 1px, transparent 1px) 0 0/46px 46px, ${bot}`;
+      case "geometric": return `repeating-linear-gradient(135deg, ${darken(D,.35)} 0 46px, ${mid} 46px 92px)`;
+      case "galaxy": return `radial-gradient(1.5px 1.5px at 12% 22%,#fff,transparent),radial-gradient(1px 1px at 32% 64%,#fff,transparent),radial-gradient(1.5px 1.5px at 54% 18%,#fff,transparent),radial-gradient(1px 1px at 72% 50%,#fff,transparent),radial-gradient(1.5px 1.5px at 86% 78%,#fff,transparent),radial-gradient(1px 1px at 44% 88%,#fff,transparent),radial-gradient(1px 1px at 92% 34%,#fff,transparent),radial-gradient(760px 480px at 72% 22%,${P}44,transparent 70%),radial-gradient(820px 540px at 22% 74%,${A}33,transparent 70%),${darken(D,.82)}`;
+      case "watercolor": return `radial-gradient(540px 440px at 24% 30%,${P}55,transparent 62%),radial-gradient(540px 450px at 76% 66%,${A}55,transparent 62%),radial-gradient(500px 410px at 60% 20%,${D}55,transparent 62%),${lighten(D,.42)}`;
+      case "vintage": return `radial-gradient(1200px 820px at 50% 38%, ${darken(A,.42)} 0%, ${darken(D,.5)} 60%, ${bot} 100%)`;
+      case "neon": return `radial-gradient(42% 50% at 32% 44%, ${P}66, transparent 70%),radial-gradient(46% 56% at 67% 56%, ${A}59, transparent 72%),radial-gradient(34% 34% at 50% 50%, ${A}22, transparent 70%),repeating-linear-gradient(0deg, rgba(255,255,255,.035) 0 1px, transparent 1px 40px),repeating-linear-gradient(90deg, rgba(255,255,255,.028) 0 1px, transparent 1px 84px),${darken(D,.66)}`;
+      case "carbon": return `repeating-linear-gradient(45deg, ${darken(D,.55)} 0 2px, ${darken(D,.7)} 2px 6px), repeating-linear-gradient(135deg, ${darken(D,.55)} 0 2px, ${darken(D,.7)} 2px 6px), ${darken(D,.62)}`;
+      case "rays": return `repeating-conic-gradient(from 0deg at 50% 0%, ${A}22 0 6deg, transparent 6deg 13deg), radial-gradient(1200px 820px at 50% -8%, ${lighten(D,.16)} 0%, ${darken(D,.62)} 60%, ${darken(D,.82)} 100%)`;
+      case "bokeh": return `radial-gradient(circle at 18% 28%, ${P}40, transparent 9%), radial-gradient(circle at 76% 22%, ${A}38, transparent 7%), radial-gradient(circle at 62% 68%, ${P}33, transparent 11%), radial-gradient(circle at 30% 78%, ${A}30, transparent 8%), ${darken(D,.72)}`;
+      case "aurora": return `linear-gradient(115deg, ${darken(D,.52)} 0%, ${darken(P,.16)} 34%, ${darken(A,.2)} 64%, ${darken(D,.58)} 100%)`;
+      case "plaid": return `repeating-linear-gradient(0deg, ${P}1f 0 6px, transparent 6px 48px), repeating-linear-gradient(90deg, ${P}1f 0 6px, transparent 6px 48px), repeating-linear-gradient(0deg, ${A}17 0 2px, transparent 2px 48px), ${darken(D,.64)}`;
+      case "waves": return `radial-gradient(150% 70% at 50% 132%, ${P}3a, transparent 56%), radial-gradient(150% 70% at 50% -32%, ${A}2c, transparent 56%), linear-gradient(180deg, ${darken(D,.5)}, ${darken(D,.76)})`;
+      case "image": return t.bgimg ? `url("${t.bgimg}") center/${({contain:"contain",stretch:"100% 100%"}[t.fit]||"cover")} no-repeat` : bot;
+      default: return `radial-gradient(1400px 900px at 50% -15%, ${dark} 0%, ${mid} 60%, ${bot} 100%)`;
+    }
+  }
+
+  function downscaleLogo(file,max,cb,jpeg){const fr=new FileReader();fr.onload=e=>{const img=new Image();img.onload=()=>{let w=img.width,h=img.height;const s=Math.min(1,max/Math.max(w,h));w=Math.max(1,Math.round(w*s));h=Math.max(1,Math.round(h*s));const c=document.createElement('canvas');c.width=w;c.height=h;const ctx=c.getContext('2d');if(jpeg){ctx.fillStyle='#0b1020';ctx.fillRect(0,0,w,h);}ctx.drawImage(img,0,0,w,h);try{cb(jpeg?c.toDataURL('image/jpeg',0.82):c.toDataURL('image/png'))}catch(err){cb(null)}};img.onerror=()=>cb(null);img.src=e.target.result;};fr.onerror=()=>cb(null);fr.readAsDataURL(file);}
+
+  function previewBg(){ return bgBackground(bgStyle, {deep:$("deep").value, primary:$("primary").value, accent:$("accent").value, bgimg:$("bgimg").value.trim(), fit:($("bgFit")?$("bgFit").value:"cover")}); }
+
+  function logoTag(){ const l=$("logo").value.trim(); return l?`<img class="sc-logo" src="${l}" onerror="this.style.display='none'">`:""; }
+
+  function renderScreen(){
+    const t1=$("title1").value||"TRIVIA", t2=$("title2").value||"", primary=$("primary").value, accent=$("accent").value,
+      deep=$("deep").value, light=$("light").value, cat=esc($("scat").value||"CATEGORY"),
+      q=esc($("squestion").value||"Your question shows here"), a=esc($("sanswer").value||"Answer");
+    // k = scale that maps the 1920×1080 game stage down to this preview, so every
+    // size is drawn at the SAME proportion as the real game (true WYSIWYG).
+    const k=($("pvStage").clientWidth||530)/1920;
+    const px=n=>(n*k).toFixed(2)+"px";
+    const titleFontV=($("titleFont")&&$("titleFont").value)||"'Anton',Impact,sans-serif";
+    const qFontV=($("qFont")&&$("qFont").value)||"'Anton',Impact,sans-serif";
+    const labelFontV=($("labelFont")&&$("labelFont").value)||"'Anton',Impact,sans-serif";
+    const headerBg=darken(deep,.34);
+    const stripe=pos=>`<div style="position:absolute;left:0;right:0;${pos}:0;height:${px(9)};display:flex"><i style="flex:1;background:${primary}"></i><i style="flex:1;background:${accent}"></i><i style="flex:1;background:${deep}"></i></div>`;
+    const bar=pos=>`<div style="height:${px(28)};background:${headerBg};position:relative;flex:0 0 auto">${stripe(pos)}</div>`;
+    const bxOn=boxOn();
+    const boxFill=bxOn?`linear-gradient(180deg,${$("boxBg").value},${darken($("boxBg").value,.32)})`:`linear-gradient(180deg,${darken(deep,.34)},${darken(deep,.62)})`;
+    const boxBorder=bxOn?$("boxBorder").value:accent;
+    const bw=$("boxWidth")?+$("boxWidth").value:100;
+    const badge=(bg,fs,txt)=>`<span class="${txt[0]==='Q'||txt.indexOf('OF')>-1?'sc-badge':'sc-cat'}" style="background:${bg};color:${accent};font-family:${labelFontV};font-size:${px(fs)};letter-spacing:${px(4)};padding:${px(14)} ${px(34)};border:${px(5)} solid #000;border-radius:${px(14)};white-space:nowrap;text-shadow:${px(2)} ${px(2)} 0 #000">${txt}</span>`;
+    const boxStyle=`flex:1;display:flex;align-items:center;justify-content:center;width:100%;max-width:${bw}%;margin:0 auto;background:${boxFill};border:${px(5)} solid ${boxBorder};border-radius:${px(22)};padding:${px(40)} ${px(50)};overflow:hidden;color:${light};font-family:${qFontV}`;
+    const numStyle=`display:inline-block;background:${accent};color:${primary};border:${px(3)} solid #000;border-radius:${px(12)};padding:${px(4)} ${px(18)};margin-right:${px(18)};font-size:0.8em;vertical-align:middle`;
+    const howtoStyle=`align-self:center;max-width:${px(1400)};font-family:'Fredoka',sans-serif;font-size:${px(46)};font-weight:600;line-height:1.3;text-align:center;color:${light};background:transparent;border:none;border-radius:${px(16)};padding:${px(18)} ${px(32)}`;
+    // Host-only SCOREBOARD pill (top-center of the question/answer screen; hidden on the TVs in the real game)
+    const scoreStyle=`align-self:flex-start;font-family:${labelFontV};background:${accent};color:${primary};border:${px(4)} solid #000;border-radius:${px(12)};font-size:${px(30)};font-weight:900;letter-spacing:${px(2)};padding:${px(12)} ${px(64)};white-space:nowrap`;
+    const scorePill=`<span class="sc-score" style="${scoreStyle}">🏆 SCOREBOARD</span>`;
+    const logo=$("logo").value.trim();
+    const logoTag=logo?`<img src="${logo}" style="max-width:${px(760)};max-height:${px(300)};display:block;margin:0 auto ${px(20)}" onerror="this.style.display='none'">`:"";
+    // Movable built-ins on the question screen: corner logo, NEXT button, hint line.
+    const qlogo=logo?`<img class="sc-qlogo" src="${logo}" style="height:${px(150)};max-width:${px(340)};object-fit:contain;display:block" onerror="this.style.display='none'">`:"";
+    const nextMock=`<div class="sc-next" style="align-self:center;font-family:${labelFontV};background:${accent};color:${darken(primary,.12)};border:${px(5)} solid #000;border-radius:${px(16)};font-size:${px(40)};font-weight:900;letter-spacing:${px(2)};padding:${px(16)} ${px(52)};white-space:nowrap;cursor:move">NEXT QUESTION ▶</div>`;
+    const hintMock=`<div class="sc-hint" style="align-self:center;font-family:'Inter',sans-serif;font-size:${px(24)};color:${light};opacity:.85;text-align:center;white-space:nowrap">Write your answer on the paper provided &nbsp;•&nbsp; Press SPACE or click NEXT to advance</div>`;
+    let content="";
+    if(screen==="title"){
+      content=`<div style="flex:1;display:flex;flex-direction:column;align-items:center;justify-content:center;gap:${px(8)};padding:${px(34)}">
+        ${logoTag}
+        <div class="sc-t1" style="font-family:${titleFontV};font-size:${px(130)};line-height:.95;letter-spacing:${px(4)};color:${primary};text-shadow:${px(5)} ${px(5)} 0 ${accent},${px(10)} ${px(10)} 0 ${deep},${px(14)} ${px(14)} 0 #000">${esc(t1)}</div>
+        ${t2?`<div class="sc-t2" style="font-family:${titleFontV};font-size:${px(80)};letter-spacing:${px(14)};color:${accent};text-shadow:${px(4)} ${px(4)} 0 ${deep},${px(8)} ${px(8)} 0 #000">${esc(t2)}</div>`:""}
+      </div>`;
+    } else if(screen==="question"){
+      content=`<div style="flex:1;min-height:0;display:flex;flex-direction:column;padding:${px(34)} ${px(32)};gap:${px(18)}">
+        <div style="display:flex;justify-content:space-between;align-items:flex-start;gap:${px(24)}"><div style="display:flex;align-items:center;gap:${px(16)}">${qlogo}${badge(deep,44,'QUESTION 1 OF 10')}</div>${scorePill}${badge(primary,48,cat)}</div>
+        <div class="sc-box" style="${boxStyle}"><div class="sc-box-body" style="width:100%"><span class="sc-num" style="${numStyle}">1</span>${q}</div></div>
+        <div class="sc-howto" style="${howtoStyle}">📝 Just walked in? Grab an answer sheet, write each answer in its numbered box, and turn it in after each round.</div>
+        ${nextMock}
+        ${hintMock}
+      </div>`;
+    } else if(screen==="answer"){
+      content=`<div style="flex:1;min-height:0;display:flex;flex-direction:column;padding:${px(34)} ${px(32)};gap:${px(18)}">
+        <div style="display:flex;justify-content:space-between;align-items:flex-start;gap:${px(24)}">${badge(deep,44,'ROUND 1 ANSWERS')}${scorePill}${badge(primary,48,'ANSWER 1 OF 10')}</div>
+        <div class="sc-box" style="${boxStyle};flex:0 0 auto;height:40%"><div class="sc-box-body" style="width:100%"><span class="sc-num" style="${numStyle}">1</span>${q}</div></div>
+        <div class="sc-ans" style="margin-top:${px(8)};font-family:${qFontV};font-size:${px(64)};font-weight:900;text-align:center;color:${darken(primary,.1)};background:${accent};border:${px(5)} solid #000;border-radius:${px(18)};padding:${px(20)} ${px(40)}">✓ ${a}</div>
+      </div>`;
+    } else if(screen==="phone"){
+      // The actual PLAYER phone interface — its own editable background + fonts.
+      content=`<div style="flex:1;display:flex;align-items:center;justify-content:center;padding:${px(24)}">
+        <div style="width:${px(680)};max-width:94%;display:flex;flex-direction:column;align-items:center;gap:${px(30)};padding:${px(56)} ${px(56)}">
+          <div class="sc-ph-team" style="font-family:${labelFontV};font-size:${px(40)};letter-spacing:${px(3)};color:${accent};text-shadow:${px(2)} ${px(2)} 0 #000">📱 TEAM AWESOME</div>
+          <div class="sc-ph-q" style="font-family:${qFontV};font-size:${px(60)};color:${light};text-align:center;line-height:1.15">Question 1 of 10</div>
+          <div class="sc-ph-prompt" style="font-family:${qFontV};font-size:${px(40)};color:${light};opacity:.8;text-align:center">Type your answer below</div>
+          <div class="sc-ph-input" style="width:100%;background:${darken(deep,.18)};border:${px(4)} solid ${accent};border-radius:${px(18)};padding:${px(30)} ${px(34)};color:${light};font-family:${qFontV};font-size:${px(44)};text-align:center">Your answer…</div>
+          <div class="sc-ph-submit" style="font-family:${labelFontV};font-size:${px(50)};font-weight:900;letter-spacing:${px(2)};color:${light};background:${primary};border:${px(5)} solid #000;border-radius:${px(18)};padding:${px(24)} ${px(82)};text-shadow:${px(2)} ${px(2)} 0 #000">SUBMIT</div>
+        </div>
+      </div>`;
+    } else {
+      // Standings + Winner screens — reusable button + hint styling.
+      const btnSt=`align-self:center;font-family:${labelFontV};background:${primary};color:${light};border:${px(5)} solid #000;border-radius:${px(16)};font-size:${px(40)};font-weight:900;letter-spacing:${px(2)};padding:${px(16)} ${px(54)};white-space:nowrap;cursor:move`;
+      const hintSt=`align-self:center;font-family:'Inter',sans-serif;font-size:${px(24)};color:${light};opacity:.85;text-align:center;white-space:nowrap`;
+      if(screen==="standings"){
+        content=`<div style="flex:1;display:flex;flex-direction:column;align-items:center;justify-content:center;gap:${px(22)};padding:${px(40)}">
+          <div class="sc-fbtitle" style="font-family:${titleFontV};font-size:${px(80)};letter-spacing:${px(4)};color:${accent};text-align:center;text-shadow:${px(4)} ${px(4)} 0 ${primary},${px(8)} ${px(8)} 0 #000">🏆 STANDINGS — AFTER ROUND 1</div>
+          <div class="sc-fbmsg" style="font-family:${qFontV};font-size:${px(34)};color:${light};text-align:center">No teams entered — add them in 🏆 SCOREBOARD.</div>
+          <div class="sc-fbbtn" style="${btnSt}">SEE THE LEADER ▶</div>
+          <div class="sc-fbhint" style="${hintSt}">Press SPACE or click to continue</div>
+        </div>`;
+      } else {
+        content=`<div style="flex:1;display:flex;flex-direction:column;align-items:center;justify-content:center;gap:${px(18)};padding:${px(40)}">
+          <div class="sc-winburst" style="font-size:${px(96)};line-height:1">🎉</div>
+          <div class="sc-winlabel" style="font-family:${titleFontV};font-size:${px(64)};letter-spacing:${px(3)};color:${accent};text-align:center;text-shadow:${px(3)} ${px(3)} 0 ${primary},${px(6)} ${px(6)} 0 #000">ROUND 1 WINNER</div>
+          <div class="sc-winname" style="font-family:${titleFontV};font-size:${px(100)};color:${light};text-align:center">Team Name</div>
+          <div class="sc-winbtn" style="${btnSt}">NEXT ROUND ▶</div>
+        </div>`;
+      }
+    }
+    $("pvScreen").innerHTML = screen==="phone"
+      ? `<div style="width:100%;height:100%;display:flex;flex-direction:column">${content}</div>`   // player phone view — no TV stripe bars
+      : `<div style="width:100%;height:100%;display:flex;flex-direction:column">${bar('bottom')}${content}${bar('top')}</div>`;
+    positionBuiltins();
+    if(!(slots[screen]&&slots[screen].box)){ fitPreviewBox(); requestAnimationFrame(fitPreviewBox); }   // box is auto-fit unless its size was captured/locked
+  }
+  // Auto-size the question/answer text to fill its box — mirrors the game's
+  // fitQuestion(), so the preview (and fullscreen) match the real game.
+  function fitPreviewBox(){
+    const box=$("pvScreen")&&$("pvScreen").querySelector(".sc-box"); if(!box) return;
+    // Measure the INNER text element — not the box — so the resize handles (which sit
+    // a few px outside the box) don't inflate the measurement and force tiny text.
+    const body=box.querySelector(".sc-box-body")||box.firstElementChild; if(!body) return;
+    const k=($("pvStage").clientWidth||530)/1920;   // preview px per stage px — fit in STAGE px so the preview matches the game's fitQuestion exactly
+    const cs=getComputedStyle(box);
+    const padX=parseFloat(cs.paddingLeft)+parseFloat(cs.paddingRight), padY=parseFloat(cs.paddingTop)+parseFloat(cs.paddingBottom);
+    box.style.whiteSpace="normal";
+    const fits=F=>{ box.style.fontSize=(F*k)+"px"; return body.scrollWidth<=(box.clientWidth-padX)+1 && body.scrollHeight<=(box.clientHeight-padY)+1; };
+    let lo=10,hi=240,best=10;
+    for(let i=0;i<20;i++){ const mid=(lo+hi)/2; if(fits(mid)){best=mid;lo=mid;}else hi=mid; }
+    box.style.fontSize=(best*k)+"px";
+  }
+  // When "Move built-in items" is on for this screen, position the built-in mock
+  // elements freely (% of the canvas) and make them mouse-draggable.
+  // Measure where the built-in items currently sit (default layout) and return
+  // them as slots — so turning on "Move built-in items" changes NOTHING, it just
+  // makes the current layout draggable.
+  function captureSlots(){
+    const st=$("pvStage").getBoundingClientRect();
+    const map={logo:".sc-qlogo",badge:".sc-badge",category:".sc-cat",score:".sc-score",box:".sc-box",howto:".sc-howto",answer:".sc-ans",next:".sc-next",hint:".sc-hint",fbtitle:".sc-fbtitle",fbmsg:".sc-fbmsg",fbbtn:".sc-fbbtn",fbhint:".sc-fbhint",winburst:".sc-winburst",winlabel:".sc-winlabel",winname:".sc-winname",winbtn:".sc-winbtn"};
+    const out={};
+    Object.keys(map).forEach(name=>{
+      const el=$("pvScreen").querySelector(map[name]); if(!el) return;
+      const r=el.getBoundingClientRect();
+      const s={ x:+(((r.left-st.left)/st.width)*100).toFixed(2), y:+(((r.top-st.top)/st.height)*100).toFixed(2),
+        w:+((r.width/st.width)*100).toFixed(2), h:+((r.height/st.height)*100).toFixed(2) };
+      if(name==="box") s.fs=parseFloat(getComputedStyle(el).fontSize);
+      out[name]=s;
+    });
+    return out;
+  }
+  function positionBuiltins(){
+    const sl=slots[screen]; if(!sl) return;
+    const map={ logo:".sc-qlogo", badge:".sc-badge", category:".sc-cat", score:".sc-score", box:".sc-box", howto:".sc-howto", answer:".sc-ans", next:".sc-next", hint:".sc-hint", fbtitle:".sc-fbtitle", fbmsg:".sc-fbmsg", fbbtn:".sc-fbbtn", fbhint:".sc-fbhint", winburst:".sc-winburst", winlabel:".sc-winlabel", winname:".sc-winname", winbtn:".sc-winbtn" };
+    Object.keys(map).forEach(name=>{
+      const el=$("pvScreen").querySelector(map[name]); const s=sl[name];
+      if(!el||!s) return;
+      el.style.position="absolute"; el.style.left=s.x+"%"; el.style.top=s.y+"%";
+      el.style.margin="0"; el.style.flex="none"; el.style.cursor="move"; el.style.zIndex="6";
+      if(name==="box"){
+        // The question box is a sized container; the text auto-fits inside it.
+        if(s.w!=null) el.style.width=s.w+"%";
+        if(s.h!=null) el.style.height=s.h+"%";
+        if(s.fs!=null) el.style.fontSize=s.fs+"px";   // keep the captured fitted size
+      } else if(s.s!=null){
+        // Text pills + logo size to their CONTENT (text always stays inside) and only
+        // grow/shrink via scale — never force a w/h that could clip the text.
+        el.style.transform="scale("+s.s+")"; el.style.transformOrigin="top left";
+      }
+      el.style.outline="1px dashed rgba(255,255,255,.35)"; el.style.outlineOffset="3px";
+      if(selBuiltin && selBuiltin.name===name){ el.style.outline="2px solid var(--accent)"; }
+      attachBuiltinDrag(el,s,name);
+      addHandles(el,(ev,dirX,dirY,handle)=>resizeBuiltin(ev,dirX,dirY,handle,el,name,s));
+    });
+  }
+  // Select a built-in item (badge/category/box/logo/etc.) to tweak its text size.
+  function selectBuiltin(name,s){ selBuiltin={name,s}; selId=null; renderScreen(); renderProps(); }
+  // 8 directional handles (4 edges + 4 corners). dirX:-1=west,1=east; dirY:-1=north,1=south.
+  const RZ_DIRS=[["n",0,-1],["s",0,1],["e",1,0],["w",-1,0],["ne",1,-1],["nw",-1,-1],["se",1,1],["sw",-1,1]];
+  function addHandles(target,onStart){
+    RZ_DIRS.forEach(d=>{
+      const h=document.createElement("div"); h.className="rz-h "+d[0]; target.appendChild(h);
+      h.addEventListener("pointerdown",ev=>{ ev.preventDefault(); ev.stopPropagation(); onStart(ev,d[1],d[2],h); });
+    });
+  }
+  function resizeBuiltin(ev,dirX,dirY,handle,el,name,s){
+    const rect=$("pvStage").getBoundingClientRect();
+    const sx=ev.clientX, sy=ev.clientY, startW=s.w, startH=s.h, startX=s.x, startY=s.y, startS=s.s||1;
+    try{handle.setPointerCapture(ev.pointerId);}catch(_){}
+    const mv=m=>{
+      const dxP=(m.clientX-sx)/rect.width*100, dyP=(m.clientY-sy)/rect.height*100;
+      if(name==="box"){
+        if(dirX===1) s.w=Math.max(15,Math.min(100,startW+dxP));
+        else if(dirX===-1){ const nw=Math.max(15,Math.min(100,startW-dxP)); s.x=Math.max(0,startX+(startW-nw)); s.w=nw; }
+        if(dirY===1) s.h=Math.max(10,Math.min(95,startH+dyP));
+        else if(dirY===-1){ const nh=Math.max(10,Math.min(95,startH-dyP)); s.y=Math.max(0,startY+(startH-nh)); s.h=nh; }
+        el.style.left=s.x+"%"; el.style.top=s.y+"%"; el.style.width=s.w+"%"; el.style.height=s.h+"%";
+        fitPreviewBox(); s.fs=parseFloat(getComputedStyle(el).fontSize);
+      } else {
+        const out=(dirX*(m.clientX-sx)+dirY*(m.clientY-sy))/150;
+        s.s=Math.max(0.3,Math.min(4,startS+out));
+        el.style.transform="scale("+s.s+")"; el.style.transformOrigin="top left";
+      }
+    };
+    const up=()=>{ handle.removeEventListener("pointermove",mv); handle.removeEventListener("pointerup",up); saveDesign(); };
+    handle.addEventListener("pointermove",mv); handle.addEventListener("pointerup",up);
+  }
+  function attachBuiltinDrag(el,s,name){
+    el.addEventListener("pointerdown",ev=>{
+      if(ev.target.closest("input,button,select,textarea")) return;
+      ev.preventDefault();
+      const rect=$("pvStage").getBoundingClientRect();
+      const sx=ev.clientX,sy=ev.clientY,ex=s.x,ey=s.y; let moved=false;
+      try{el.setPointerCapture(ev.pointerId);}catch(_){}
+      const mv=m=>{ if(Math.abs(m.clientX-sx)+Math.abs(m.clientY-sy)>3) moved=true; s.x=Math.max(0,Math.min(98,ex+(m.clientX-sx)/rect.width*100)); s.y=Math.max(0,Math.min(96,ey+(m.clientY-sy)/rect.height*100)); el.style.left=s.x+"%"; el.style.top=s.y+"%"; };
+      const up=()=>{ el.removeEventListener("pointermove",mv); el.removeEventListener("pointerup",up); if(!moved && name) selectBuiltin(name,s); else saveDesign(); };
+      el.addEventListener("pointermove",mv); el.addEventListener("pointerup",up);
+    });
+  }
+
+  function buildLink(){
+    const base=$("base").value.trim().replace(/index\.html.*$/,"").replace(/\/+$/,"")+"/index.html";
+    const p=new URLSearchParams();
+    if($("title1").value)p.set("title1",$("title1").value);
+    if($("title2").value)p.set("title2",$("title2").value);
+    COLORS.forEach(k=>p.set(k,$(k).value.replace('#','')));
+    if($("logo").value.trim())p.set("logo",$("logo").value.trim());
+    if(bgStyle&&bgStyle!=="gradient")p.set("bg",bgStyle);
+    if(bgStyle==="image"&&$("bgimg").value.trim())p.set("bgimg",$("bgimg").value.trim());
+    if(els.length)p.set("design",DESIGN_ID);
+    return base+"?"+p.toString();
+  }
+
+  // ---- freeform design elements (text boxes + images, draggable per screen) ----
+  function renderDesign(){
+    const wrap=$("pvDesign"); wrap.innerHTML="";
+    const rect=$("pvStage").getBoundingClientRect(); const scale=rect.width/1920;
+    els.filter(e=>e.s===screen||e.s==="all").forEach(e=>{
+      const d=document.createElement("div"); d.className="de-el"+(e.id===selId?" sel":""); d.dataset.id=e.id;
+      d.style.left=e.x+"%"; d.style.top=e.y+"%"; d.style.width=e.w+"%";
+      if(e.t==="img"){ const im=document.createElement("img"); im.src=e.src; d.appendChild(im); }
+      else { const tx=document.createElement("div"); tx.className="de-text2"; tx.textContent=e.txt||""; tx.style.color=e.c; tx.style.fontSize=(e.sz*scale)+"px"; tx.style.fontWeight=e.b; tx.style.textAlign=e.a; tx.style.textShadow="2px 2px 0 rgba(0,0,0,.5)"; if(e.font) tx.style.fontFamily=e.font; d.appendChild(tx); }
+      attachDrag(d,e);
+      addHandles(d,(ev,dirX,dirY,handle)=>resizeEl(ev,dirX,dirY,handle,d,e));
+      wrap.appendChild(d);
+    });
+  }
+  // Pull any edge/corner to resize a freeform element.
+  // Text: left/right widen the wrap box, up/down grow the font. Image: any edge changes width.
+  function resizeEl(ev,dirX,dirY,handle,d,e){
+    select(e.id);
+    const rect=$("pvStage").getBoundingClientRect(); const scale=rect.width/1920;
+    const sx=ev.clientX, sy=ev.clientY, startSz=e.sz||40, startW=e.w||30, startX=e.x;
+    try{handle.setPointerCapture(ev.pointerId);}catch(_){}
+    const mv=m=>{
+      const dxP=(m.clientX-sx)/rect.width*100;
+      if(e.t==="img"){
+        if(dirX===1) e.w=Math.max(3,Math.min(100,startW+dxP));
+        else if(dirX===-1){ const nw=Math.max(3,Math.min(100,startW-dxP)); e.x=Math.max(0,startX+(startW-nw)); e.w=nw; }
+        else { e.w=Math.max(3,Math.min(100,startW+dirY*(m.clientY-sy)/rect.width*100)); }
+        d.style.width=e.w+"%"; d.style.left=e.x+"%";
+      } else {
+        if(dirX!==0){
+          if(dirX===1) e.w=Math.max(5,Math.min(100,startW+dxP));
+          else { const nw=Math.max(5,Math.min(100,startW-dxP)); e.x=Math.max(0,startX+(startW-nw)); e.w=nw; }
+          d.style.width=e.w+"%"; d.style.left=e.x+"%";
+        }
+        if(dirY!==0){
+          e.sz=Math.max(8,Math.min(400,startSz+dirY*(m.clientY-sy)/scale));
+          const tx=d.querySelector(".de-text2"); if(tx) tx.style.fontSize=(e.sz*scale)+"px";
+        }
+      }
+    };
+    const up=()=>{ handle.removeEventListener("pointermove",mv); handle.removeEventListener("pointerup",up); saveDesign(); updateLink(); renderProps(); };
+    handle.addEventListener("pointermove",mv); handle.addEventListener("pointerup",up);
+  }
+  function attachDrag(d,e){
+    d.addEventListener("pointerdown",ev=>{
+      ev.preventDefault(); select(e.id);
+      const rect=$("pvStage").getBoundingClientRect();
+      const sx=ev.clientX, sy=ev.clientY, ex=e.x, ey=e.y;
+      try{d.setPointerCapture(ev.pointerId);}catch(_){}
+      const mv=m=>{ e.x=Math.max(0,Math.min(96,ex+(m.clientX-sx)/rect.width*100)); e.y=Math.max(0,Math.min(94,ey+(m.clientY-sy)/rect.height*100)); d.style.left=e.x+"%"; d.style.top=e.y+"%"; };
+      const up=()=>{ d.removeEventListener("pointermove",mv); d.removeEventListener("pointerup",up); saveDesign(); updateLink(); };
+      d.addEventListener("pointermove",mv); d.addEventListener("pointerup",up);
+    });
+  }
+  function select(id){ selId=id; $("pvDesign").querySelectorAll(".de-el").forEach(n=>n.classList.toggle("sel", n.dataset.id===id)); renderProps(); }
+  // (link is generated on Publish now — see publish())
+  function renderProps(){
+    const box=$("props"); const e=els.find(x=>x.id===selId);
+    if(!e){ if(selBuiltin) renderBuiltinProps(box); else { box.style.display="none"; box.innerHTML=""; } return; }
+    selBuiltin=null;   // a freeform element is selected — clear any built-in selection
+    box.style.display="block";
+    const scrSel='<div class="prow"><span class="pl">Screen</span><div class="seg" id="elScreen">'+
+      ["title","question","answer","standings","winner","all"].map(s=>'<button type="button" data-s="'+s+'"'+(e.s===s?' class="active"':'')+'>'+s[0].toUpperCase()+s.slice(1)+'</button>').join('')+'</div></div>';
+    const layerRow='<div class="prow"><span class="pl">Layer</span><div class="seg"><button type="button" id="elBack">⬇ Send back</button><button type="button" id="elFront">⬆ Bring front</button></div></div>';
+    if(e.t==="img"){
+      box.innerHTML='<div class="prow"><span class="pl">Size</span><input type="range" id="elW" min="5" max="100" value="'+e.w+'"></div>'+layerRow+scrSel+
+        '<div class="prow"><button class="btn del" id="elDel">🗑 Delete</button></div>';
+    } else {
+      box.innerHTML='<div class="prow"><span class="pl">Text</span><input type="text" id="elTxt" value="'+e.txt.replace(/"/g,"&quot;")+'"></div>'+
+        '<div class="prow"><span class="pl">Font</span><select id="elFont" class="inp" style="flex:1">'+fontOptions(e.font||"")+'</select></div>'+
+        '<div class="prow"><span class="pl">Color</span><input type="color" id="elC" value="'+e.c+'"><span class="pl">Size</span><input type="range" id="elSz" min="14" max="240" value="'+e.sz+'"></div>'+
+        '<div class="prow"><span class="pl">Align</span><div class="seg" id="elA">'+["left","center","right"].map(a=>'<button type="button" data-a="'+a+'"'+(e.a===a?' class="active"':'')+'>'+a[0].toUpperCase()+a.slice(1)+'</button>').join('')+'</div></div>'+
+        layerRow+scrSel+'<div class="prow"><button class="btn del" id="elDel">🗑 Delete</button></div>';
+    }
+    const on=(id,ev,fn)=>{const el=$(id);if(el)el.addEventListener(ev,fn);};
+    on("elTxt","input",x=>{e.txt=x.target.value;renderDesign();saveDesign();});
+    on("elFont","change",x=>{e.font=x.target.value;renderDesign();saveDesign();});
+    on("elC","input",x=>{e.c=x.target.value;renderDesign();saveDesign();});
+    on("elSz","input",x=>{e.sz=+x.target.value;renderDesign();saveDesign();});
+    on("elW","input",x=>{e.w=+x.target.value;renderDesign();saveDesign();});
+    box.querySelectorAll("#elA button").forEach(b=>b.addEventListener("click",()=>{e.a=b.dataset.a;renderProps();renderDesign();saveDesign();}));
+    box.querySelectorAll("#elScreen button").forEach(b=>b.addEventListener("click",()=>{e.s=b.dataset.s;renderProps();renderDesign();saveDesign();updateLink();}));
+    // Layer order = position in the els array (later = drawn on top, in builder AND game).
+    on("elFront","click",()=>{ const i=els.indexOf(e); if(i>=0){ els.splice(i,1); els.push(e); renderDesign(); saveDesign(); updateLink(); } });
+    on("elBack","click",()=>{ const i=els.indexOf(e); if(i>=0){ els.splice(i,1); els.unshift(e); renderDesign(); saveDesign(); updateLink(); } });
+    on("elDel","click",()=>{els=els.filter(x=>x.id!==e.id);selId=null;renderDesign();renderProps();saveDesign();updateLink();});
+  }
+  // Properties for a selected BUILT-IN item — a text-size slider (scale). The box
+  // auto-fits its text, so it shows a note to drag the edges instead.
+  function renderBuiltinProps(box){
+    const nm=selBuiltin.name, s=selBuiltin.s;
+    const labels={logo:"Logo",badge:"Question badge",category:"Category",score:"Scoreboard",box:"Question box",howto:"“Just walked in” note",next:"Next button",hint:"Hint line",answer:"Answer"};
+    const label=labels[nm]||nm;
+    box.style.display="block";
+    if(nm==="box"){
+      box.innerHTML='<div class="prow"><span class="pl">'+esc(label)+'</span></div>'+
+        '<p class="help" style="margin:0 0 8px">The question text auto-fits this box — drag the box edges/corners to resize it and the text grows or shrinks to fit.</p>'+
+        '<div class="prow"><button class="btn copy" id="biDone">Done</button></div>';
+    } else {
+      const sc=Math.round((s.s||1)*100);
+      box.innerHTML='<div class="prow"><span class="pl">'+esc(label)+' — text size</span><span style="font-size:12px;color:var(--muted)" id="biVal">'+sc+'%</span></div>'+
+        '<div class="prow"><input type="range" id="biSize" min="40" max="320" value="'+sc+'" style="width:100%;accent-color:var(--accent)"></div>'+
+        '<p class="help" style="margin:0 0 8px">Tip: click any built-in item to size it. You can also drag its corner handles.</p>'+
+        '<div class="prow"><button class="btn copy" id="biDone">Done</button></div>';
+    }
+    const on=(id,ev,fn)=>{const el=$(id);if(el)el.addEventListener(ev,fn);};
+    on("biSize","input",x=>{ selBuiltin.s.s=(+x.target.value)/100; const v=$("biVal"); if(v) v.textContent=x.target.value+"%"; renderScreen(); saveDesign(); });
+    on("biDone","click",()=>{ selBuiltin=null; renderScreen(); renderProps(); });
+  }
+  function addText(){ const e={id:newId(),t:"text",s:screen,x:33,y:42,w:34,txt:"New text",c:$("light").value,sz:54,b:800,a:"center"}; els.push(e); renderDesign(); select(e.id); saveDesign(); updateLink(); }
+  function addImage(file,x,y){ downscaleLogo(file,480,d=>{ if(!d)return; const e={id:newId(),t:"img",s:screen,x:(x!=null?+x.toFixed(1):36),y:(y!=null?+y.toFixed(1):34),w:26,src:d}; els.push(e); renderDesign(); select(e.id); saveDesign(); updateLink(); }); }
+
+  function refresh(){
+    SCREENS[screen]=readBgFonts();   // persist this screen's background + fonts
+    COLORS.forEach(k=>{const h=$("hx"+k);if(h)h.textContent=$(k).value;});
+    ["boxBg","boxBorder"].forEach(k=>{const h=$("hx"+k);if(h&&$(k))h.textContent=$(k).value;});
+    const dimv=$("dim")?Math.max(0,Math.min(0.9,(+$("dim").value)/100)):0;
+    const dimLayer=dimv>0?`linear-gradient(rgba(0,0,0,${dimv}),rgba(0,0,0,${dimv})), `:"";
+    $("pvStage").style.background=dimLayer+previewBg();
+    $("pvStripe").style.display="none";   // the stripe is now drawn inside the screen (in the header bar)
+    renderScreen();
+    renderDesign();
+    saveDesign();
+    updateLink();
+  }
+
+  inputs.forEach(id=>{const e=$(id);if(e)e.addEventListener("input",refresh);});
+  $("bgimg").addEventListener("input",refresh);
+  $("bgSel").addEventListener("change",()=>{ bgStyle=$("bgSel").value; $("bgImgWrap").style.display=bgStyle==="image"?"block":"none"; refresh(); });
+  if($("bgFit")) $("bgFit").addEventListener("change",refresh);
+  $("bgImgFile").addEventListener("change",e=>{const f=e.target.files&&e.target.files[0];if(!f)return;downscaleLogo(f,1280,d=>{if(d){$("bgimg").value=d;refresh();}},true);});
+  // Remove the uploaded background image and drop to a PLAIN flat color (no gradient,
+  // no stripe texture) so it's just the logo on a clean background.
+  $("bgImgRemove").addEventListener("click",()=>{ bgStyle="solid"; $("bgSel").value="solid"; $("bgimg").value=""; $("bgImgFile").value=""; $("bgImgWrap").style.display="none"; refresh(); });
+  // ---- My backgrounds: upload your own photos, saved on this device, click to use ----
+  function loadBGs(){ try{ return JSON.parse(localStorage.getItem("trivia-backgrounds")||"[]"); }catch(e){ return []; } }
+  function saveBGs(){ try{ localStorage.setItem("trivia-backgrounds", JSON.stringify(BGS)); }catch(e){} }
+  let BGS=loadBGs();
+  function renderBGs(){
+    const wrap=$("bgGallery"); if(!wrap) return;
+    const cur=$("bgimg")?$("bgimg").value.trim():"";
+    if(!BGS.length){ wrap.innerHTML='<span class="preset-empty">No backgrounds added yet — upload one above.</span>'; return; }
+    wrap.innerHTML=BGS.map((src,i)=>`<div class="bg-thumb${src===cur?' active':''}" data-i="${i}" style="background-image:url('${src}')" title="Use this background"><button class="px" data-del="${i}" title="Remove">×</button></div>`).join("");
+    wrap.querySelectorAll(".bg-thumb").forEach(el=>el.addEventListener("click",ev=>{ if(ev.target.classList.contains("px")) return; useBackground(BGS[+el.dataset.i]); }));
+    wrap.querySelectorAll(".px").forEach(b=>b.addEventListener("click",ev=>{ ev.stopPropagation(); BGS.splice(+b.dataset.del,1); saveBGs(); renderBGs(); }));
+  }
+  function useBackground(src){ bgStyle="image"; if($("bgSel"))$("bgSel").value="image"; if($("bgImgWrap"))$("bgImgWrap").style.display="block"; if($("bgimg"))$("bgimg").value=src; refresh(); renderBGs(); }
+  $("bgAddFile").addEventListener("change",e=>{
+    const files=[...(e.target.files||[])]; if(!files.length) return;
+    let pending=files.length, first=null;
+    files.forEach(f=>downscaleLogo(f,1280,d=>{ if(d){ BGS.unshift(d); if(first===null) first=d; } if(--pending===0){ saveBGs(); renderBGs(); if(first) useBackground(first); } },true));
+    e.target.value="";
+  });
+  renderBGs();
+  // ---- Drag images from a folder: drop on the CANVAS = image element; drop on
+  // the BACKGROUND area = background. ----
+  const dropImgs=dt=>[...((dt&&dt.files)||[])].filter(f=>/^image\//.test(f.type));
+  const dtHasFiles=dt=>!!dt&&[...(dt.items||[])].some(i=>i.kind==="file");
+  document.addEventListener("dragover",e=>{ if(dtHasFiles(e.dataTransfer)) e.preventDefault(); });
+  document.addEventListener("drop",e=>{ if(dtHasFiles(e.dataTransfer)) e.preventDefault(); });   // stop the browser opening the file
+  (function(){
+    const stage=$("pvStage");
+    if(stage){
+      stage.addEventListener("dragover",e=>{ if(dtHasFiles(e.dataTransfer)){ e.preventDefault(); e.dataTransfer.dropEffect="copy"; stage.style.outline="3px dashed var(--accent)"; stage.style.outlineOffset="-3px"; } });
+      stage.addEventListener("dragleave",()=>{ stage.style.outline=""; });
+      stage.addEventListener("drop",e=>{ const files=dropImgs(e.dataTransfer); stage.style.outline=""; if(!files.length) return; e.preventDefault(); e.stopPropagation();
+        const r=stage.getBoundingClientRect();
+        const x=Math.max(0,Math.min(90,(e.clientX-r.left)/r.width*100)), y=Math.max(0,Math.min(90,(e.clientY-r.top)/r.height*100));
+        files.forEach((f,i)=>addImage(f, x+i*3, y+i*3)); });
+    }
+    const bgZone=$("bgGallery") && $("bgGallery").closest(".group");
+    if(bgZone){
+      bgZone.addEventListener("dragover",e=>{ if(dtHasFiles(e.dataTransfer)){ e.preventDefault(); e.dataTransfer.dropEffect="copy"; bgZone.style.outline="2px dashed var(--accent)"; bgZone.style.borderRadius="10px"; } });
+      bgZone.addEventListener("dragleave",()=>{ bgZone.style.outline=""; });
+      bgZone.addEventListener("drop",e=>{ const files=dropImgs(e.dataTransfer); bgZone.style.outline=""; if(!files.length) return; e.preventDefault(); e.stopPropagation();
+        let pending=files.length, first=null;
+        files.forEach(f=>downscaleLogo(f,1280,d=>{ if(d){ BGS.unshift(d); if(first===null) first=d; } if(--pending===0){ saveBGs(); renderBGs(); if(first) useBackground(first); } },true)); });
+    }
+  })();
+  // ---- Import fonts: Google Fonts by name, or upload a .ttf/.otf/.woff (embedded) ----
+  function familyOf(stack){ if(!stack) return ""; const m=String(stack).match(/['"]([^'"]+)['"]/); return m?m[1]:String(stack).split(",")[0].trim(); }
+  function loadCustomFonts(){ try{ return JSON.parse(localStorage.getItem("trivia-fonts")||"[]"); }catch(e){ return []; } }
+  function saveCustomFonts(){ try{ localStorage.setItem("trivia-fonts", JSON.stringify(CUSTOM_FONTS)); }catch(e){} }
+  let CUSTOM_FONTS=loadCustomFonts();
+  function injectGoogleFont(family){ if(!family) return; const id="gf-"+family.replace(/[^a-z0-9]+/gi,"-"); if(document.getElementById(id)) return; const l=document.createElement("link"); l.id=id; l.rel="stylesheet"; l.href="https://fonts.googleapis.com/css2?family="+encodeURIComponent(family).replace(/%20/g,"+")+":wght@400;600;700;900&display=swap"; document.head.appendChild(l); }
+  function injectFontFace(family,src){ if(!family||!src) return; const id="ff-"+family.replace(/[^a-z0-9]+/gi,"-"); if(document.getElementById(id)) return; const st=document.createElement("style"); st.id=id; st.textContent="@font-face{font-family:'"+family.replace(/'/g,"")+"';src:url('"+src+"');font-display:swap}"; document.head.appendChild(st); }
+  function refreshFontSelects(){ ["titleFont","qFont","labelFont"].forEach(id=>{ const el=$(id); if(el){ const v=el.value; el.innerHTML=fontOptions(v); el.value=v; } }); }
+  function addImportedFont(c){
+    if(!FONTS.some(o=>o.f===c.f)) FONTS.push({n:c.n+" (imported)", f:c.f});
+    if(c.src) injectFontFace(familyOf(c.f),c.src); else injectGoogleFont(familyOf(c.f));
+    if(!CUSTOM_FONTS.some(o=>o.f===c.f)){ CUSTOM_FONTS.push(c); saveCustomFonts(); }
+    refreshFontSelects();
+  }
+  CUSTOM_FONTS.forEach(c=>{ if(!FONTS.some(o=>o.f===c.f)) FONTS.push({n:c.n+" (imported)", f:c.f}); if(c.src) injectFontFace(familyOf(c.f),c.src); else injectGoogleFont(familyOf(c.f)); });
+  function fontMsg(t,ok){ const m=$("fontMsg"); if(m){ m.textContent=t; m.className="pubstatus "+(ok?"ok":"warn"); } }
+  function importGoogleFont(name){ name=(name||"").trim().replace(/['"]/g,""); if(!name){ $("fontImport").focus(); return; } addImportedFont({n:name, f:"'"+name+"',sans-serif"}); $("titleFont").value="'"+name+"',sans-serif"; refresh(); fontMsg("✓ Added “"+name+"” — if it doesn’t render, check the spelling on fonts.google.com.",true); }
+  $("fontImportBtn").addEventListener("click",()=>{ importGoogleFont($("fontImport").value); $("fontImport").value=""; });
+  $("fontImport").addEventListener("keydown",e=>{ if(e.key==="Enter"){ e.preventDefault(); $("fontImportBtn").click(); } });
+  $("fontFile").addEventListener("change",e=>{ const f=e.target.files&&e.target.files[0]; if(!f) return;
+    const name=(f.name||"Custom Font").replace(/\.(ttf|otf|woff2?)$/i,"").replace(/[-_]+/g," ").trim()||"Custom Font";
+    const rd=new FileReader(); rd.onload=()=>{ addImportedFont({n:name, f:"'"+name+"',sans-serif", src:rd.result}); $("qFont").value="'"+name+"',sans-serif"; refresh(); fontMsg("✓ Uploaded “"+name+"”.",true); }; rd.readAsDataURL(f); e.target.value=""; });
+  $("titleFont").innerHTML=fontOptions("");
+  $("titleFont").addEventListener("change",refresh);
+  $("qFont").innerHTML=fontOptions(""); $("qFont").addEventListener("change",refresh);
+  $("labelFont").innerHTML=fontOptions(""); $("labelFont").addEventListener("change",refresh);
+  $("boxWidth").addEventListener("input",()=>{ $("boxWidthVal").textContent=$("boxWidth").value+"%"; refresh(); });
+  $("dim").addEventListener("input",()=>{ $("dimVal").textContent=$("dim").value+"%"; refresh(); });
+  $("boxCustom").addEventListener("change",()=>{ $("boxColors").style.display=$("boxCustom").checked?"grid":"none"; refresh(); });
+  $("boxBg").addEventListener("input",refresh);
+  $("boxBorder").addEventListener("input",refresh);
+  const randFont=()=>FONTS[Math.floor(Math.random()*FONTS.length)].f;
+  $("randomBtn").addEventListener("click",()=>{
+    const styles=["gradient","solid","monochrome","duotone","dots","grid","geometric","stripes","watercolor","spotlight","galaxy","vintage","neon"];
+    bgStyle=styles[Math.floor(Math.random()*styles.length)];
+    $("bgSel").value=bgStyle; $("bgImgWrap").style.display="none";
+    $("titleFont").value=randFont(); $("qFont").value=randFont(); $("labelFont").value=randFont();
+    els.forEach(e=>{ if(e.t==="text") e.font=randFont(); });
+    refresh();
+  });
+  document.querySelectorAll("#screens button").forEach(b=>b.addEventListener("click",()=>{
+    screen=b.dataset.sc;document.querySelectorAll("#screens button").forEach(x=>x.classList.toggle("active",x===b));
+    selBuiltin=null; selId=null;
+    writeBgFonts(SCREENS[screen]);updateBgScope();   // load THIS screen's background + fonts
+    refresh();renderProps();syncFreeBtn();
+  }));
+  function syncFreeBtn(){ const b=$("freeLayout"); if(b) b.classList.toggle("active", !!slots[screen]); }
+  $("freeLayout").addEventListener("click",()=>{
+    selBuiltin=null;
+    if(slots[screen]) delete slots[screen];
+    else slots[screen]=captureSlots();   // keep everything exactly where it is, just make it draggable
+    syncFreeBtn(); refresh(); renderProps(); saveDesign();
+  });
+  $("addText").addEventListener("click",addText);
+  $("addImg").addEventListener("change",e=>{const f=e.target.files&&e.target.files[0];if(f)addImage(f);e.target.value="";});
+  $("savePreset").addEventListener("click",async ()=>{
+    const name=prompt("Name this new preset:", $("vname").value||"My brand");
+    if(!name) return;
+    const entry={name:name.trim(), theme:themeObj(), els:els.map(e=>Object.assign({},e)), slots:JSON.parse(JSON.stringify(slots))};
+    PRESETS.push(entry); activePreset=PRESETS.length-1; renderPresets(); refreshPresetButtons();
+    const ok=await savePresets();
+    if(!ok){ PRESETS=PRESETS.filter(p=>p!==entry); activePreset=null; renderPresets(); refreshPresetButtons(); }   // didn't persist — don't pretend it did
+  });
+  // Start a brand-new look from a completely blank canvas (no preset is "active" after this).
+  $("newBlank").addEventListener("click",()=>{ applyPreset(BLANK_PRESET); });
+  // Overwrite the currently-loaded saved preset with the current design (keeps its name).
+  $("updatePreset").addEventListener("click",async ()=>{
+    if(activePreset==null || !PRESETS[activePreset]) return;
+    const keepName=PRESETS[activePreset].name;
+    PRESETS[activePreset]={ name:keepName, theme:themeObj(), els:els.map(e=>Object.assign({},e)), slots:JSON.parse(JSON.stringify(slots)) };
+    renderPresets();
+    const u=$("updatePreset"); u.textContent="Updated!";
+    const ok=await savePresets();
+    setTimeout(refreshPresetButtons, 1100);
+    if(!ok && PRESETS[activePreset]) PRESETS[activePreset].name=keepName;   // alert already shown by savePresets
+  });
+  $("publishBtn").addEventListener("click",publish);
+  function updatePhoneTab(){
+    document.querySelectorAll("#screens .phone-only").forEach(el=>el.style.display = gameMode==="phone" ? "" : "none");
+    if(gameMode!=="phone" && screen==="phone"){ const t=[...document.querySelectorAll("#screens button")].find(b=>b.dataset.sc==="title"); if(t) t.click(); }
+  }
+  document.querySelectorAll("#modeSeg button").forEach(b=>b.addEventListener("click",()=>{
+    gameMode=b.dataset.mode;
+    document.querySelectorAll("#modeSeg button").forEach(x=>x.classList.toggle("active",x===b));
+    if($("base")) $("base").value = PAPER_BASE;   // both versions run on the paper engine
+    updatePhoneTab();
+    published=false; if($("pubStatus")){$("pubStatus").textContent="";$("pubStatus").className="pubstatus";} $("hostLink").value="";
+    refresh();
+  }));
+  $("fsBtn").addEventListener("click",()=>{
+    const c=$("editorCard");
+    if(document.fullscreenElement||document.webkitFullscreenElement){ (document.exitFullscreen||document.webkitExitFullscreen).call(document); }
+    else { (c.requestFullscreen||c.webkitRequestFullscreen||(()=>{})).call(c); }
+  });
+  const onFs=()=>{ const fs=!!(document.fullscreenElement||document.webkitFullscreenElement); $("fsBtn").textContent=fs?"✕":"⛶"; refresh(); renderProps(); };
+  document.addEventListener("fullscreenchange",onFs);
+  document.addEventListener("webkitfullscreenchange",onFs);
+  loadPresetsAsync();   // loads saved presets from IndexedDB (+ migrates old localStorage ones), then renders
+  renderTemplates();
+  $("logoFile").addEventListener("change",e=>{const f=e.target.files&&e.target.files[0];if(!f)return;downscaleLogo(f,240,d=>{if(d){$("logo").value=d;refresh();}});});
+  $("logoClear").addEventListener("click",()=>{$("logo").value="";$("logoFile").value="";refresh();});
+  // ---- Build the theme from the logo's own colors ----
+  function extractPalette(src,cb){
+    const img=new Image(); img.crossOrigin="anonymous";
+    img.onload=()=>{
+      const N=72,c=document.createElement("canvas");c.width=N;c.height=N;
+      const ctx=c.getContext("2d");ctx.drawImage(img,0,0,N,N);
+      let data; try{ data=ctx.getImageData(0,0,N,N).data; }catch(e){ cb(null); return; }
+      const buckets={};
+      for(let i=0;i<data.length;i+=4){
+        if(data[i+3]<128) continue;
+        const r=data[i],g=data[i+1],b=data[i+2];
+        const key=(r>>4)+"-"+(g>>4)+"-"+(b>>4);
+        const bk=buckets[key]||(buckets[key]={r:0,g:0,b:0,n:0});
+        bk.r+=r;bk.g+=g;bk.b+=b;bk.n++;
+      }
+      const arr=Object.values(buckets).map(bk=>{
+        const r=bk.r/bk.n,g=bk.g/bk.n,b=bk.b/bk.n,mx=Math.max(r,g,b),mn=Math.min(r,g,b);
+        const l=(mx+mn)/2/255,s=mx===mn?0:(mx-mn)/(255-Math.abs(mx+mn-255));
+        return {r,g,b,n:bk.n,l,s};
+      });
+      cb(arr.length?arr:null);
+    };
+    img.onerror=()=>cb(null);
+    img.src=src;
+  }
+  const _hexOf=o=>"#"+[o.r,o.g,o.b].map(x=>Math.round(x).toString(16).padStart(2,"0")).join("");
+  const _dist=(a,b)=>Math.sqrt((a.r-b.r)**2+(a.g-b.g)**2+(a.b-b.b)**2);
+  function applyLogoColors(){
+    const src=$("logo").value.trim(), msg=$("logoMsg");
+    if(!src){ msg.textContent="Add a logo first."; msg.className="pubstatus warn"; return; }
+    msg.textContent="Reading logo colors…"; msg.className="pubstatus";
+    extractPalette(src,arr=>{
+      if(!arr){ msg.textContent="Couldn't read the colors — please UPLOAD the logo file (pasted URLs are often blocked)."; msg.className="pubstatus warn"; return; }
+      const score=o=>o.s*(1-Math.abs(o.l-0.5))*Math.log(o.n+1);
+      const vibrant=arr.slice().sort((a,b)=>score(b)-score(a));
+      const primary=vibrant[0];
+      const accent=vibrant.find(o=>o!==primary && _dist(o,primary)>70) || vibrant[1] || primary;
+      const dark=arr.slice().sort((a,b)=>a.l-b.l)[0];
+      const lightC=arr.slice().sort((a,b)=>b.l-a.l)[0];
+      $("primary").value=_hexOf(primary);
+      $("accent").value=_hexOf(accent);
+      $("deep").value=(dark.l<0.28)?_hexOf(dark):darken(_hexOf(primary),.58);
+      $("light").value=(lightC.l>0.8)?_hexOf(lightC):"#f7f1e3";
+      refresh();
+      msg.textContent="✓ Theme built from your logo — tweak any color below."; msg.className="pubstatus ok";
+    });
+  }
+  $("useLogoColors").addEventListener("click",applyLogoColors);
+  // Brand palette — your own named colors, saved in this browser, applied to any slot.
+  function loadPalette(){ try{ return JSON.parse(localStorage.getItem("trivia-palette")||"[]"); }catch(e){ return []; } }
+  function savePalette(){ try{ localStorage.setItem("trivia-palette", JSON.stringify(PALETTE)); }catch(e){} }
+  let PALETTE = loadPalette();
+  function renderPalette(){
+    const wrap=$("palChips"); if(!wrap) return;
+    if(!PALETTE.length){ wrap.innerHTML='<span class="preset-empty">No saved colors yet — add your brand colors below.</span>'; return; }
+    wrap.innerHTML=PALETTE.map((c,i)=>`<span class="chip" data-i="${i}"><span class="dot" style="background:${c.hex};box-shadow:inset 0 0 0 1px rgba(255,255,255,.25)"></span>${esc(c.name)}<button class="px" data-del="${i}" title="Remove color">×</button></span>`).join("");
+    wrap.querySelectorAll(".chip").forEach(el=>el.addEventListener("click",ev=>{
+      if(ev.target.classList.contains("px")) return;
+      const inp=$($("palTarget").value); if(!inp) return;
+      inp.value=PALETTE[+el.dataset.i].hex; inp.dispatchEvent(new Event("input"));
+    }));
+    wrap.querySelectorAll(".px").forEach(b=>b.addEventListener("click",ev=>{ ev.stopPropagation(); PALETTE.splice(+b.dataset.del,1); savePalette(); renderPalette(); }));
+  }
+  $("palAdd").addEventListener("click",()=>{
+    const name=($("palName").value||"").trim(), hex=$("palHex").value;
+    if(!name){ $("palName").focus(); return; }
+    PALETTE.push({name, hex}); savePalette(); $("palName").value=""; renderPalette();
+  });
+  $("palName").addEventListener("keydown",e=>{ if(e.key==="Enter") $("palAdd").click(); });
+  renderPalette();
+
+  // ---- Brand search: type a brand, drop in its known palette [primary, accent, background, light] ----
+  const BRAND_LIBRARY = [
+    // Sports bars / wings / casual dining
+    {n:"Buffalo Wild Wings", c:["#FFC72C","#D5202E","#161616","#FFFFFF"]},
+    {n:"Pluckers Wing Bar",  c:["#C8102E","#F4C430","#1D3A8A","#F7F1E3"]},
+    {n:"Taco Mac",           c:["#C8102E","#F2C75C","#1B2A5E","#FFFFFF"]},
+    {n:"Hooters",            c:["#FF7A00","#FFFFFF","#5A3A1A","#FFF7E8"]},
+    {n:"Twin Peaks",         c:["#B11F1A","#F2E8D4","#262422","#F2E8D4"]},
+    {n:"Wingstop",           c:["#0C8A44","#ED1C24","#0A2E1C","#FFFFFF"]},
+    {n:"Dave & Buster's",    c:["#E11B22","#00A0DF","#101820","#FFFFFF"]},
+    {n:"Topgolf",            c:["#003DA5","#93D500","#0A1A3A","#FFFFFF"]},
+    {n:"Applebee's",         c:["#E2231A","#6CC04A","#1C1C1C","#FFFFFF"]},
+    {n:"Chili's",            c:["#BA0C2F","#00843D","#231F20","#FFFFFF"]},
+    {n:"TGI Fridays",        c:["#C8102E","#FFFFFF","#1A1A1A","#FFFFFF"]},
+    {n:"Texas Roadhouse",    c:["#B11116","#E8A33D","#231F20","#FFF7E8"]},
+    // Fast food
+    {n:"McDonald's",         c:["#FFC72C","#DA291C","#27251F","#FFFFFF"]},
+    {n:"Chick-fil-A",        c:["#E51636","#FFFFFF","#3D1414","#FFFFFF"]},
+    {n:"Wendy's",            c:["#E2203B","#FFFFFF","#032E61","#FFFFFF"]},
+    {n:"Burger King",        c:["#EC1C24","#F5A623","#502314","#FFF3E0"]},
+    {n:"KFC",                c:["#A6192E","#FFFFFF","#231F20","#FFFFFF"]},
+    {n:"Taco Bell",          c:["#702082","#E4097E","#2B0A33","#FFFFFF"]},
+    {n:"Subway",             c:["#008C15","#FFC600","#00451B","#FFFFFF"]},
+    {n:"Domino's",           c:["#E31837","#006491","#0B1E2D","#FFFFFF"]},
+    {n:"Pizza Hut",          c:["#EE3124","#FFFFFF","#1A1A1A","#FFFFFF"]},
+    {n:"Papa John's",        c:["#C8102E","#2E7D32","#1C1C1C","#FFFFFF"]},
+    {n:"Raising Cane's",     c:["#D9241F","#F2C75C","#1A1A1A","#FFFFFF"]},
+    // Drinks
+    {n:"Coca-Cola",          c:["#F40009","#FFFFFF","#1A1A1A","#FFFFFF"]},
+    {n:"Pepsi",              c:["#004B93","#EB2330","#002A5C","#FFFFFF"]},
+    {n:"Budweiser",          c:["#C8102E","#C8A04B","#1A1A1A","#FFFFFF"]},
+    {n:"Bud Light",          c:["#0A3A82","#00A3E0","#041E45","#FFFFFF"]},
+    {n:"Modelo",             c:["#C8A24B","#003B7A","#1A2A4A","#FFF7E0"]},
+    {n:"Red Bull",           c:["#DB0A40","#FFD700","#001A70","#FFFFFF"]},
+    {n:"Gatorade",           c:["#FF6600","#00B5E2","#111111","#FFFFFF"]},
+    {n:"Monster Energy",     c:["#84C625","#FFFFFF","#0A0A0A","#FFFFFF"]},
+    // Sports / leagues / media
+    {n:"ESPN",               c:["#E32219","#FFFFFF","#000000","#FFFFFF"]},
+    {n:"NFL",                c:["#013369","#D50A0A","#00132E","#FFFFFF"]},
+    {n:"NBA",                c:["#C8102E","#1D428A","#10141A","#FFFFFF"]},
+    {n:"MLB",                c:["#041E42","#BF0D3E","#02132B","#FFFFFF"]},
+    {n:"NHL",                c:["#111111","#A2AAAD","#000000","#FFFFFF"]},
+    // Tech / other popular
+    {n:"Spotify",            c:["#1DB954","#FFFFFF","#121212","#FFFFFF"]},
+    {n:"YouTube",            c:["#FF0000","#FFFFFF","#0F0F0F","#FFFFFF"]},
+    {n:"Netflix",            c:["#E50914","#FFFFFF","#141414","#FFFFFF"]},
+    {n:"Twitch",             c:["#9146FF","#FFFFFF","#0E0E10","#FFFFFF"]},
+    {n:"Amazon",             c:["#FF9900","#00A8E1","#232F3E","#FFFFFF"]},
+    {n:"Starbucks",          c:["#00704A","#D4A24E","#1E3932","#FFFFFF"]},
+    // More sports bars / wings / dining
+    {n:"Hooters (orange)",   c:["#FF7A00","#1A1A1A","#2A1400","#FFFFFF"]},
+    {n:"Zaxby's",            c:["#C8102E","#000000","#1A1A1A","#FFFFFF"]},
+    {n:"Slim Chickens",      c:["#C8102E","#F2C75C","#1A1410","#FFF7E8"]},
+    {n:"Wingstop (green)",   c:["#0C8A44","#1A1A1A","#0A2E1C","#FFFFFF"]},
+    {n:"BJ's Brewhouse",     c:["#C8A04B","#8B1A1A","#1A1410","#FFF7E8"]},
+    {n:"Yard House",         c:["#B11116","#C8A04B","#1A1A1A","#FFF7E8"]},
+    {n:"Miller's Ale House", c:["#C8102E","#C8A04B","#1A1410","#FFF7E8"]},
+    {n:"Olive Garden",       c:["#5B7F2F","#B11116","#241C12","#FFF7E8"]},
+    {n:"Outback Steakhouse", c:["#C8102E","#C8A04B","#1A1A1A","#FFF7E8"]},
+    {n:"Red Lobster",        c:["#C8102E","#FFFFFF","#2A0E0E","#FFFFFF"]},
+    {n:"Cheesecake Factory", c:["#5A3A22","#C8A04B","#2A1C10","#FFF7E8"]},
+    {n:"Texas de Brazil",    c:["#1B5E20","#C8A04B","#0E2A14","#FFF7E8"]},
+    {n:"IHOP",               c:["#1879D9","#ED1C24","#0A2540","#FFFFFF"]},
+    {n:"Denny's",            c:["#E21836","#FFC20E","#1A1A1A","#FFFFFF"]},
+    {n:"Cracker Barrel",     c:["#8B5A2B","#C8A04B","#2A1C10","#FFF7E8"]},
+    {n:"Waffle House",       c:["#FFCE00","#C8102E","#2A2410","#1A1A1A"]},
+    {n:"Five Guys",          c:["#C8102E","#FFFFFF","#2A0E0E","#FFFFFF"]},
+    {n:"Shake Shack",        c:["#4CBB17","#FFFFFF","#0E2A14","#FFFFFF"]},
+    {n:"In-N-Out",           c:["#E4002B","#FFD200","#2A0E12","#FFFFFF"]},
+    {n:"Whataburger",        c:["#FF6A00","#FFFFFF","#2A1400","#FFFFFF"]},
+    {n:"Sonic Drive-In",     c:["#0072CE","#FFD200","#04284A","#FFFFFF"]},
+    {n:"Arby's",             c:["#C8102E","#FFFFFF","#1A1A1A","#FFFFFF"]},
+    {n:"Popeyes",            c:["#F58220","#C8102E","#2A1400","#FFFFFF"]},
+    {n:"Panera Bread",       c:["#6AA84F","#C8A04B","#1C2A14","#FFF7E8"]},
+    {n:"Chipotle",           c:["#A81612","#4C1B0E","#1A0E0A","#FFF7E8"]},
+    {n:"Panda Express",      c:["#D2002E","#000000","#2A0010","#FFFFFF"]},
+    {n:"Dunkin'",            c:["#FF6E1B","#E11383","#2A1400","#FFFFFF"]},
+    {n:"Dairy Queen",        c:["#EC1C2E","#00549F","#04204A","#FFFFFF"]},
+    {n:"Jersey Mike's",      c:["#00529B","#ED1C24","#04204A","#FFFFFF"]},
+    {n:"Jimmy John's",       c:["#C8102E","#FFFFFF","#1A1A1A","#FFFFFF"]},
+    {n:"Culver's",           c:["#1A4789","#FFFFFF","#0A2147","#FFFFFF"]},
+    {n:"Portillo's",         c:["#C8102E","#FFD200","#1A1A1A","#FFFFFF"]},
+    // Beer / drinks
+    {n:"Miller Lite",        c:["#004B8D","#C8A04B","#04284A","#FFFFFF"]},
+    {n:"Coors Light",        c:["#6E7B85","#C8102E","#14181C","#FFFFFF"]},
+    {n:"Corona",             c:["#002A5C","#FFD200","#001A3A","#FFFFFF"]},
+    {n:"Heineken",           c:["#008200","#E2001A","#042A04","#FFFFFF"]},
+    {n:"Guinness",           c:["#1A1A1A","#C8A04B","#0A0A0A","#E8C879"]},
+    {n:"Stella Artois",      c:["#C8102E","#C8A04B","#1A1410","#FFF7E8"]},
+    {n:"Blue Moon",          c:["#1E3A8A","#F2C75C","#0A1A40","#FFFFFF"]},
+    {n:"Michelob Ultra",     c:["#0A3A82","#C8A04B","#04204A","#FFFFFF"]},
+    {n:"White Claw",         c:["#7FB7D4","#FFFFFF","#1A2A30","#FFFFFF"]},
+    {n:"Jack Daniel's",      c:["#1A1A1A","#FFFFFF","#0A0A0A","#FFFFFF"]},
+    {n:"Crown Royal",        c:["#4B2E83","#C8A04B","#1A0E2A","#F2E8D4"]},
+    {n:"Mountain Dew",       c:["#5CB615","#E4002B","#0A2A04","#FFFFFF"]},
+    {n:"Dr Pepper",          c:["#7A1518","#FFFFFF","#2A0A0C","#FFFFFF"]},
+    {n:"Sprite",             c:["#1AAE4E","#FFFFFF","#0A2A14","#FFFFFF"]},
+    // Sports / leagues
+    {n:"NCAA",               c:["#00264D","#FFFFFF","#001A33","#FFFFFF"]},
+    {n:"UFC",                c:["#D20A0A","#000000","#1A0A0A","#FFFFFF"]},
+    {n:"NASCAR",             c:["#FFD200","#00529B","#04204A","#FFFFFF"]},
+    {n:"WWE",                c:["#C8102E","#000000","#1A1A1A","#FFFFFF"]},
+    {n:"Formula 1",          c:["#E10600","#FFFFFF","#0A0A12","#FFFFFF"]},
+    {n:"PGA Tour",           c:["#0A3A6B","#C8A04B","#04204A","#FFFFFF"]},
+    // Big brands
+    {n:"Google",             c:["#4285F4","#EA4335","#1A1A1A","#FFFFFF"]},
+    {n:"Apple",              c:["#555555","#FFFFFF","#1A1A1A","#FFFFFF"]},
+    {n:"TikTok",             c:["#25F4EE","#FE2C55","#0A0A0A","#FFFFFF"]},
+    {n:"Instagram",          c:["#E1306C","#833AB4","#1A0A2A","#FFFFFF"]},
+    {n:"Disney",             c:["#1A3A8F","#FFFFFF","#0A1A40","#FFFFFF"]},
+    {n:"Nike",               c:["#111111","#FFFFFF","#0A0A0A","#FFFFFF"]},
+    {n:"Adidas",             c:["#000000","#FFFFFF","#0A0A0A","#FFFFFF"]},
+    {n:"Target",             c:["#CC0000","#FFFFFF","#2A0000","#FFFFFF"]},
+    {n:"Walmart",            c:["#0071CE","#FFC220","#042A4A","#FFFFFF"]}
+  ];
+  function applyBrand(b){
+    if(!b) return;
+    ["primary","accent","deep","light"].forEach((k,i)=>{ if($(k)&&b.c[i]) $(k).value=b.c[i]; });
+    refresh();   // updates hex labels + preview
+    if($("brandSearch")) $("brandSearch").value=b.n;
+    const box=$("brandResults"); if(box) box.style.display="none";
+  }
+  function renderBrandResults(q){
+    const box=$("brandResults"); if(!box) return;
+    q=(q||"").trim().toLowerCase();
+    if(!q){ box.innerHTML=""; box.style.display="none"; return; }
+    const hits=BRAND_LIBRARY.map((b,i)=>({b,i})).filter(o=>o.b.n.toLowerCase().includes(q)).slice(0,8);
+    if(!hits.length){ box.innerHTML='<div class="brand-empty">No match — upload the brand’s logo above and click “Use logo colors.”</div>'; box.style.display="block"; return; }
+    box.innerHTML=hits.map(o=>`<button type="button" class="brand-row" data-i="${o.i}"><span class="brand-name">${esc(o.b.n)}</span><span class="brand-sw">${o.b.c.map(h=>`<i style="background:${h}"></i>`).join("")}</span></button>`).join("");
+    box.style.display="block";
+    box.querySelectorAll(".brand-row").forEach(el=>el.addEventListener("click",()=>applyBrand(BRAND_LIBRARY[+el.dataset.i])));
+  }
+  if($("brandSearch")){
+    $("brandSearch").addEventListener("input",e=>renderBrandResults(e.target.value));
+    $("brandSearch").addEventListener("focus",e=>renderBrandResults(e.target.value));
+    document.addEventListener("click",e=>{ if(!e.target.closest("#brandSearch")&&!e.target.closest("#brandResults")){ const b=$("brandResults"); if(b) b.style.display="none"; } });
+  }
+  $("copyBtn").addEventListener("click",()=>{$("hostLink").select();navigator.clipboard.writeText($("hostLink").value).then(()=>{$("copied").classList.add("show");setTimeout(()=>$("copied").classList.remove("show"),2000);});});
+  ["title","question","answer","standings","winner","phone"].forEach(k=>{ if(!SCREENS[k]) SCREENS[k]=readBgFonts(); });   // seed each screen with the defaults
+  updateBgScope();
+  updatePhoneTab();
+  refresh();
+</script>
+</body>
+</html>
