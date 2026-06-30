@@ -4784,21 +4784,35 @@ processLogos();            // strip any white box from the header logo
 //   TV:    the GO LIVE window opens …/?tv&room=NAME automatically.
 //   (?room=NAME still direct-hosts a fixed room for power users.)
 const _params = new URLSearchParams(location.search);
-const _isTv = _params.has("tv") || _params.has("screen");
-const _room = _params.get("room");
-const _play = _params.get("play");
-loadDesign();   // apply a custom freeform design (?design=id) before first render
-if (_params.has("demo")) {
-  startDemo();                                   // TV point-of-view preview (no setup)
-} else if (_play) {
-  connectAsPlayer(_play.toUpperCase());          // phone player — joins a room, answers on their phone
-} else if (_isTv) {
-  connectAsDisplay((_room || "MAIN").toUpperCase());   // TV window — mirrors its game
-} else if (_room) {
-  autoHost(_room.toUpperCase());                 // power user: direct-host a fixed name
+// The tool's FRONT DOOR is the builder (make.html). This engine only runs when it has a
+// job to do — host/show a design, mirror a TV, run a phone player, or a demo. A bare
+// visit (no such param) opens the builder instead of a default (Pluckers-looking) game.
+const _hasJob = _params.has("design") || _params.has("tv") || _params.has("screen")
+  || _params.has("play") || _params.has("room") || _params.has("demo")
+  || location.hash.indexOf("design=") !== -1;
+if (!_hasJob) {
+  // Build the builder URL from the current directory (robust whether the path ends in
+  // "/", "/index.html", or has no trailing slash).
+  var _dir = location.pathname.replace(/index\.html?$/i, "");
+  if (_dir.charAt(_dir.length - 1) !== "/") _dir += "/";
+  location.replace(_dir + "make.html");          // → the builder ("the tool")
 } else {
-  resetHostSession();                            // fresh host link = clean slate (no teams, no timer)
-  render();                                      // host title — name a location, then GO LIVE
+  const _isTv = _params.has("tv") || _params.has("screen");
+  const _room = _params.get("room");
+  const _play = _params.get("play");
+  loadDesign();   // apply a custom freeform design (?design=id) before first render
+  if (_params.has("demo")) {
+    startDemo();                                 // TV point-of-view preview (no setup)
+  } else if (_play) {
+    connectAsPlayer(_play.toUpperCase());        // phone player — joins a room, answers on their phone
+  } else if (_isTv) {
+    connectAsDisplay((_room || "MAIN").toUpperCase());   // TV window — mirrors its game
+  } else if (_room) {
+    autoHost(_room.toUpperCase());               // power user: direct-host a fixed name
+  } else {
+    resetHostSession();                          // a published-design host link → clean host title with that design
+    render();
+  }
 }
 
 // If the host window itself is closed, free the name right away.
