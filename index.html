@@ -4795,7 +4795,9 @@ if (!_hasJob) {
   // "/", "/index.html", or has no trailing slash).
   var _dir = location.pathname.replace(/index\.html?$/i, "");
   if (_dir.charAt(_dir.length - 1) !== "/") _dir += "/";
-  location.replace(_dir + "make.html");          // → the builder ("the tool")
+  // Preserve the hash so a magic-link landing here (…#access_token=…) carries the session
+  // through to the builder instead of dropping it.
+  location.replace(_dir + "make.html" + location.hash);   // → the builder ("the tool")
 } else {
   const _isTv = _params.has("tv") || _params.has("screen");
   const _room = _params.get("room");
