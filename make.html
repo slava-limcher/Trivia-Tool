@@ -696,10 +696,20 @@
         var si = document.getElementById("paSignIn"), su = document.getElementById("paSignUp");
         si.disabled = su.disabled = true; msg().textContent = (mode === "up" ? "Creating account…" : "Signing in…");
         try {
-          var r = mode === "up" ? await c.auth.signUp(v) : await c.auth.signInWithPassword(v);
+          if (mode === "up") {
+            // Create the account via our edge function (pre-confirmed → no email, no rate limit).
+            var res = await fetch(SUPABASE_URL + "/functions/v1/signup", {
+              method: "POST",
+              headers: { "Content-Type": "application/json", "apikey": SUPABASE_ANON_KEY, "Authorization": "Bearer " + SUPABASE_ANON_KEY },
+              body: JSON.stringify(v)
+            });
+            var jr = {}; try { jr = await res.json(); } catch(e){}
+            if (!res.ok || jr.error) { msg().textContent = "Error: " + (jr.error || ("Could not create account (HTTP " + res.status + ").")); si.disabled = su.disabled = false; return; }
+            msg().textContent = "Account created — signing you in…";
+          }
+          // Sign in (new + existing accounts) → onAuthStateChange flips the UI to signed-in.
+          var r = await c.auth.signInWithPassword(v);
           if (r.error) msg().textContent = "Error: " + r.error.message;
-          else if (mode === "up" && r.data && !r.data.session) msg().textContent = "Account created, but email confirmation is on — turn it off in Supabase (Auth → Providers → Email) so accounts work instantly.";
-          // success → onAuthStateChange fires → the UI flips to signed-in
         } catch(e){ msg().textContent = "Error: " + ((e && e.message) || e); }
         si.disabled = su.disabled = false;
       };
