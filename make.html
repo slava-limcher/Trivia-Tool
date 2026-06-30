@@ -677,21 +677,35 @@
       box.innerHTML = '<div class="pa-in">Signed in as <b>' + esc(authUser.email || "you") + '</b> — your presets are private &amp; synced across devices. <button type="button" id="paOut" class="pa-link">Sign out</button></div>';
       var o = document.getElementById("paOut"); if (o) o.addEventListener("click", signOutUser);
     } else {
-      box.innerHTML = '<div class="pa-note">Sign in to save your presets <b>privately</b> &amp; sync them across devices (otherwise they stay on this device only):</div>'
-        + '<div class="pa-row"><input type="email" id="paEmail" placeholder="you@email.com" autocomplete="email" /><button type="button" id="paSend" class="pa-btn">Send sign-in link</button></div>'
+      box.innerHTML = '<div class="pa-note">Save your presets <b>privately</b> &amp; sync across devices. Create an account or sign in (otherwise presets stay on this device only):</div>'
+        + '<div class="pa-row"><input type="email" id="paEmail" placeholder="you@email.com" autocomplete="email" /></div>'
+        + '<div class="pa-row"><input type="password" id="paPass" placeholder="Password (6+ characters)" autocomplete="current-password" /></div>'
+        + '<div class="pa-row"><button type="button" id="paSignIn" class="pa-btn">Sign in</button><button type="button" id="paSignUp" class="pa-btn" style="background:#16a34a">Create account</button></div>'
         + '<div id="paMsg" class="pa-msg"></div>';
-      var send = document.getElementById("paSend");
-      if (send) send.addEventListener("click", async function(){
-        var email = ((document.getElementById("paEmail") || {}).value || "").trim(), msg = document.getElementById("paMsg");
-        if (!/.+@.+\..+/.test(email)) { if (msg) msg.textContent = "Enter a valid email address."; return; }
-        var c = supaClient(); if (!c) { if (msg) msg.textContent = "Cloud unavailable."; return; }
-        send.disabled = true; if (msg) msg.textContent = "Sending…";
+      var msg = function(){ return document.getElementById("paMsg"); };
+      var getCreds = function(){
+        var email = ((document.getElementById("paEmail") || {}).value || "").trim();
+        var pass = ((document.getElementById("paPass") || {}).value || "");
+        if (!/.+@.+\..+/.test(email)) { msg().textContent = "Enter a valid email address."; return null; }
+        if (pass.length < 6) { msg().textContent = "Password must be at least 6 characters."; return null; }
+        return { email: email, password: pass };
+      };
+      var run = async function(mode){
+        var v = getCreds(); if (!v) return;
+        var c = supaClient(); if (!c) { msg().textContent = "Cloud unavailable."; return; }
+        var si = document.getElementById("paSignIn"), su = document.getElementById("paSignUp");
+        si.disabled = su.disabled = true; msg().textContent = (mode === "up" ? "Creating account…" : "Signing in…");
         try {
-          var r = await c.auth.signInWithOtp({ email: email, options: { emailRedirectTo: location.href.split("#")[0].split("?")[0] } });
-          if (msg) msg.textContent = r.error ? ("Error: " + r.error.message) : "✓ Check your email for a sign-in link, then come back to this page.";
-        } catch(e){ if (msg) msg.textContent = "Error: " + ((e && e.message) || e); }
-        send.disabled = false;
-      });
+          var r = mode === "up" ? await c.auth.signUp(v) : await c.auth.signInWithPassword(v);
+          if (r.error) msg().textContent = "Error: " + r.error.message;
+          else if (mode === "up" && r.data && !r.data.session) msg().textContent = "Account created, but email confirmation is on — turn it off in Supabase (Auth → Providers → Email) so accounts work instantly.";
+          // success → onAuthStateChange fires → the UI flips to signed-in
+        } catch(e){ msg().textContent = "Error: " + ((e && e.message) || e); }
+        si.disabled = su.disabled = false;
+      };
+      document.getElementById("paSignIn").addEventListener("click", function(){ run("in"); });
+      document.getElementById("paSignUp").addEventListener("click", function(){ run("up"); });
+      var pe = document.getElementById("paPass"); if (pe) pe.addEventListener("keydown", function(e){ if (e.key === "Enter") run("in"); });
     }
   }
   // The saved preset currently loaded (so "Update preset" knows which to overwrite). null = none.
