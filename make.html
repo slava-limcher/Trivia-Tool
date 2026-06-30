@@ -113,6 +113,16 @@
   .preset .px{border:none;background:#eef1f7;color:#8893a8;width:18px;height:18px;border-radius:50%;cursor:pointer;font-size:13px;line-height:1;display:grid;place-items:center;padding:0}
   .preset .px:hover{background:#fde2e2;color:#b42318}
   .preset-empty{font-size:12.5px;color:var(--faint)}
+  /* Sign-in box above the presets */
+  .preset-auth{margin-bottom:10px}
+  .preset-auth .pa-note{font-size:12px;color:var(--faint);margin-bottom:6px;line-height:1.4}
+  .preset-auth .pa-in{font-size:12.5px;color:var(--ink);background:var(--field,#eef1f7);border:1px solid var(--line-strong,#d6dbe6);border-radius:8px;padding:7px 10px;line-height:1.4}
+  .preset-auth .pa-row{display:flex;gap:6px}
+  .preset-auth .pa-row input{flex:1;min-width:0;padding:7px 9px;font-size:13px;border:1px solid var(--line-strong,#d6dbe6);border-radius:7px;background:var(--field,#fff);color:var(--ink)}
+  .preset-auth .pa-btn{padding:7px 12px;font-size:12.5px;font-weight:700;border:none;border-radius:7px;background:var(--accent,#2563eb);color:#fff;cursor:pointer;white-space:nowrap}
+  .preset-auth .pa-btn:disabled{opacity:.55;cursor:default}
+  .preset-auth .pa-link{background:none;border:none;color:var(--accent,#2563eb);font-weight:700;cursor:pointer;padding:0;font-size:12.5px;text-decoration:underline}
+  .preset-auth .pa-msg{font-size:12px;color:var(--faint);margin-top:5px;min-height:1px}
 
   /* ---- Preview ---- */
   .pv-head{display:flex;align-items:center;justify-content:space-between;margin-bottom:14px;gap:10px}
@@ -251,6 +261,7 @@
       </div>
       <div class="sec">
         <div class="sec-h">Presets</div>
+        <div id="presetAuth" class="preset-auth"></div>
         <div class="preset-list" id="presetList"></div>
         <div style="display:flex;flex-wrap:wrap;gap:8px;margin-top:11px">
           <button class="btn copy" type="button" id="newBlank">New (blank)</button>
@@ -593,10 +604,12 @@
   }
 
   // ---- Presets: save/load a full look (theme + placed text & images) ----
+  // Brand-neutral starter presets shown to everyone (no real brands — the design
+  // TEMPLATES below also offer more starting looks).
   const BUILTIN_PRESETS = [
-    {name:"Pluckers", theme:{title1:"TRIVIA",title2:"NIGHT",primary:"#c8102e",accent:"#f4c430",deep:"#1d3a8a",light:"#f7f1e3",bg:"gradient",bgimg:"",logo:""}, els:[]},
-    {name:"Buffalo Wild Wings", theme:{title1:"TRIVIA",title2:"NIGHT",primary:"#FFD200",accent:"#FFFFFF",deep:"#161616",light:"#FFFFFF",bg:"gradient",bgimg:"",logo:""}, els:[]},
-    {name:"Twin Peaks", theme:{title1:"TRIVIA",title2:"NIGHT",primary:"#B11F1A",accent:"#F2E8D4",deep:"#262422",light:"#F2E8D4",bg:"gradient",bgimg:"",logo:""}, els:[]}
+    {name:"Classic Blue", theme:{title1:"TRIVIA",title2:"NIGHT",primary:"#c8102e",accent:"#f4c430",deep:"#1d3a8a",light:"#f7f1e3",bg:"gradient",bgimg:"",logo:""}, els:[]},
+    {name:"Midnight", theme:{title1:"TRIVIA",title2:"NIGHT",primary:"#7c3aed",accent:"#22d3ee",deep:"#0f172a",light:"#f1f5f9",bg:"gradient",bgimg:"",logo:""}, els:[]},
+    {name:"Sunset", theme:{title1:"TRIVIA",title2:"NIGHT",primary:"#ea580c",accent:"#fde047",deep:"#3b0764",light:"#fff7ed",bg:"spotlight",bgimg:"",logo:""}, els:[]}
   ];
   // Presets can embed full background/logo images + uploaded fonts, which blow past
   // localStorage's ~5MB cap — the save then fails silently and the preset vanishes on
@@ -607,19 +620,79 @@
   function idbGet(k){ return idbOpen().then(function(db){ return new Promise(function(res,rej){ var q=db.transaction(PRESET_STORE,"readonly").objectStore(PRESET_STORE).get(k); q.onsuccess=function(){res(q.result);}; q.onerror=function(){rej(q.error);}; }); }); }
   function idbSet(k,v){ return idbOpen().then(function(db){ return new Promise(function(res,rej){ var q=db.transaction(PRESET_STORE,"readwrite").objectStore(PRESET_STORE).put(v,k); q.onsuccess=function(){res(true);}; q.onerror=function(){rej(q.error);}; }); }); }
   let PRESETS = [];
-  async function loadPresetsAsync(){
+  let authUser = null;   // signed-in Supabase user (null = anonymous → presets stay local on this device)
+
+  // Local (IndexedDB) store — used when signed OUT.
+  async function loadLocalPresets(){
     try {
       var v = await idbGet(PRESET_KEY);
-      if (Array.isArray(v)) { PRESETS = v; }
-      else {   // one-time migration from the old localStorage store
-        try { var raw = localStorage.getItem(PRESET_KEY); if (raw) { PRESETS = JSON.parse(raw) || []; if (PRESETS.length) await idbSet(PRESET_KEY, PRESETS); } } catch(e){}
-      }
-    } catch(e){ PRESETS = []; }
+      if (Array.isArray(v)) return v;
+      var raw = localStorage.getItem(PRESET_KEY); if (raw) { var p = JSON.parse(raw) || []; if (p.length) await idbSet(PRESET_KEY, p); return p; }   // migrate old localStorage
+    } catch(e){}
+    return [];
+  }
+  function saveLocalPresets(){ return idbSet(PRESET_KEY, PRESETS).then(function(){ return true; }).catch(function(){ alert("Couldn't save the preset locally (storage error)."); return false; }); }
+
+  // Cloud (Supabase) store — used when signed IN. Per-user + PRIVATE via row-level security
+  // (each account can only read/write its own row; nobody sees anyone else's).
+  async function loadCloudPresets(){
+    var c = supaClient(); if (!c || !authUser) return [];
+    try { var r = await c.from("user_presets").select("presets").eq("user_id", authUser.id).maybeSingle(); return (r.data && Array.isArray(r.data.presets)) ? r.data.presets : []; }
+    catch(e){ return []; }
+  }
+  async function saveCloudPresets(){
+    var c = supaClient(); if (!c || !authUser) return false;
+    try { var r = await c.from("user_presets").upsert({ user_id: authUser.id, presets: PRESETS, updated_at: new Date().toISOString() }, { onConflict: "user_id" }); if (r.error) throw r.error; return true; }
+    catch(e){ alert("Couldn't save your preset to the cloud: " + ((e && e.message) || e)); return false; }
+  }
+
+  async function loadPresetsAsync(){
+    if (authUser) {
+      PRESETS = await loadCloudPresets();
+      // First sign-in: lift this device's local presets into the (empty) cloud account.
+      if (!PRESETS.length) { var local = await loadLocalPresets(); if (local.length) { PRESETS = local; await saveCloudPresets(); } }
+    } else {
+      PRESETS = await loadLocalPresets();
+    }
     renderPresets();
   }
-  async function savePresets(){
-    try { await idbSet(PRESET_KEY, PRESETS); return true; }
-    catch(e){ alert("Couldn't save the preset — storage error: " + ((e&&e.name)||e) + "\nTry deleting an old preset, or remove a very large uploaded background/font from this look."); return false; }
+  async function savePresets(){ return authUser ? saveCloudPresets() : saveLocalPresets(); }
+
+  // ---- Accounts (Supabase Auth, email magic-link). Signing in makes presets private + synced. ----
+  async function initAuth(){
+    var c = supaClient();
+    if (!c) { updateAuthUI(); loadPresetsAsync(); return; }   // no cloud configured → local presets
+    try { var s = await c.auth.getSession(); authUser = (s && s.data && s.data.session && s.data.session.user) || null; } catch(e){ authUser = null; }
+    updateAuthUI(); loadPresetsAsync();
+    c.auth.onAuthStateChange(function(event, session){
+      if (event === "INITIAL_SESSION") return;   // already handled above
+      authUser = (session && session.user) || null;
+      updateAuthUI(); loadPresetsAsync();
+    });
+  }
+  function signOutUser(){ var c = supaClient(); if (c) c.auth.signOut(); /* onAuthStateChange reloads */ }
+  function updateAuthUI(){
+    var box = document.getElementById("presetAuth"); if (!box) return;
+    if (authUser) {
+      box.innerHTML = '<div class="pa-in">Signed in as <b>' + esc(authUser.email || "you") + '</b> — your presets are private &amp; synced across devices. <button type="button" id="paOut" class="pa-link">Sign out</button></div>';
+      var o = document.getElementById("paOut"); if (o) o.addEventListener("click", signOutUser);
+    } else {
+      box.innerHTML = '<div class="pa-note">Sign in to save your presets <b>privately</b> &amp; sync them across devices (otherwise they stay on this device only):</div>'
+        + '<div class="pa-row"><input type="email" id="paEmail" placeholder="you@email.com" autocomplete="email" /><button type="button" id="paSend" class="pa-btn">Send sign-in link</button></div>'
+        + '<div id="paMsg" class="pa-msg"></div>';
+      var send = document.getElementById("paSend");
+      if (send) send.addEventListener("click", async function(){
+        var email = ((document.getElementById("paEmail") || {}).value || "").trim(), msg = document.getElementById("paMsg");
+        if (!/.+@.+\..+/.test(email)) { if (msg) msg.textContent = "Enter a valid email address."; return; }
+        var c = supaClient(); if (!c) { if (msg) msg.textContent = "Cloud unavailable."; return; }
+        send.disabled = true; if (msg) msg.textContent = "Sending…";
+        try {
+          var r = await c.auth.signInWithOtp({ email: email, options: { emailRedirectTo: location.href.split("#")[0].split("?")[0] } });
+          if (msg) msg.textContent = r.error ? ("Error: " + r.error.message) : "✓ Check your email for a sign-in link, then come back to this page.";
+        } catch(e){ if (msg) msg.textContent = "Error: " + ((e && e.message) || e); }
+        send.disabled = false;
+      });
+    }
   }
   // The saved preset currently loaded (so "Update preset" knows which to overwrite). null = none.
   let activePreset = null;
@@ -1227,7 +1300,7 @@
   const onFs=()=>{ const fs=!!(document.fullscreenElement||document.webkitFullscreenElement); $("fsBtn").textContent=fs?"✕":"⛶"; refresh(); renderProps(); };
   document.addEventListener("fullscreenchange",onFs);
   document.addEventListener("webkitfullscreenchange",onFs);
-  loadPresetsAsync();   // loads saved presets from IndexedDB (+ migrates old localStorage ones), then renders
+  initAuth();   // sets up sign-in; loads presets (cloud if signed in, else local) + renders the auth UI
   renderTemplates();
   $("logoFile").addEventListener("change",e=>{const f=e.target.files&&e.target.files[0];if(!f)return;downscaleLogo(f,240,d=>{if(d){$("logo").value=d;refresh();}});});
   $("logoClear").addEventListener("click",()=>{$("logo").value="";$("logoFile").value="";refresh();});
