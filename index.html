@@ -1643,7 +1643,7 @@
 <div id="app">
   <header>
     <div class="brand">
-      <img class="brand-logo-img" src="pluckers-logo.png?v=3" alt="Pluckers" onerror="this.style.display='none'" />
+      <img class="brand-logo-img" alt="" onerror="this.style.display='none'" />
       <div class="name">TRIVIA<small>NIGHT</small></div>
     </div>
     <div class="dont-cheat">DON'T CHEAT!</div>
@@ -1971,7 +1971,7 @@ function applyScreenStyle(key) {
 function brandLogoSrc() {
   if (THEME.logo === "none") return "";
   if (THEME.logo) return THEME.logo;
-  return "pluckers-logo.png?v=3";
+  return "";   // white-label default: no logo unless the design sets one (just the title shows)
 }
 
 // ---- Freeform design overlay ----
@@ -3117,7 +3117,7 @@ function openBrandingModal() {
   ["brPrimary", "brAccent", "brDeep", "brLight"].forEach(id => $(id).addEventListener("input", previewColors));
 
   const setLogoPreview = () => {
-    const src = pendingLogo === "none" ? "" : (pendingLogo || "pluckers-logo.png?v=3");
+    const src = pendingLogo === "none" ? "" : (pendingLogo || "");   // no default logo (white-label)
     $("brLogoPreview").innerHTML = logoPreviewHtml(src);
   };
   $("brLogoFile").addEventListener("change", (e) => {
